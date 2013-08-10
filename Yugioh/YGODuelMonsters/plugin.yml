@@ -1,0 +1,26 @@
+name: Yugioh
+version: B0.1.2_MC1.6.2_R0.1
+author: Ramirez57
+main: ramirez57.YGO.Main
+description: Yu-Gi-Oh! Duel Monsters for Minecraft!
+prefix: YGO
+commands:
+  ygo:
+    description: Master command for players
+    usage: Type /ygo help for help on Yugioh.
+    permission: ygo.player
+    permission-message: No permission
+    aliases: yugioh
+  ygoadmin:
+    description: Master command for admins
+    usage: Type /ygoadmin help for help.
+    permission: ygo.admin
+    permission-message: No permission
+    aliases: yugiohadmin
+permissions:
+  ygo.player:
+    description: Permission to use yugioh duelist commands
+    default: true
+  ygo.admin:
+    description: Permission to use ygoadmin commands
+    default: false
