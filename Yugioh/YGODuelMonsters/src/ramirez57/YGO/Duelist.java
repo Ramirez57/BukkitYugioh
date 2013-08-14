@@ -30,6 +30,7 @@ public class Duelist {
 	public Duelist() {
 		this.fusion_mat = new Stack<Card>();
 		this.rewards = new Stack<Card>();
+		this.swords = 0;
 	}
 	
 	public static Duelist fromPlayer(Player p, Inventory interf, UUID uuid) throws NoDeckException {

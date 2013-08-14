@@ -26,6 +26,7 @@ public class AI implements Runnable {
 		try {
 			AI.playDuelFor(this.playingFor, this.the_duel);
 		} catch (InterruptedException e) {
+			PluginVars.plugin.getLogger().info("AI error! Please report to Bukkit Dev page.");
 			return;
 		}
 	}

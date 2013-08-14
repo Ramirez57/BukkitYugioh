@@ -158,7 +158,7 @@ public class Duel {
 		if (this.duelists[1].player != null) {
 			PluginVars.plugin.dueling.removeElement(this.duelists[1].player
 					.getName());
-			this.duelists[0].player.closeInventory();
+			this.duelists[1].player.closeInventory();
 		}
 	}
 

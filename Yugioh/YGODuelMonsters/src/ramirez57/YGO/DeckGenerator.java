@@ -76,6 +76,11 @@ public class DeckGenerator {
 								break;
 							}
 						}
+					} else if(RitualCard.class.isInstance(card)) {
+						RitualCard rc = RitualCard.class.cast(card);
+						if(this.containsCards(mcards, rc.materials)) {
+							scards.add(card);
+						}
 					} else if(!FieldCard.class.isInstance(card)) {
 						scards.add(card);
 					}
@@ -90,6 +95,19 @@ public class DeckGenerator {
 			}
 		}
 		return result;
+	}
+	
+	public boolean containsCards(List<Card> deck, List<Integer> materials) {
+		boolean ret = true;
+		List<Integer> cards = new ArrayList<Integer>();
+		for(Card card : deck) {
+			cards.add(card.id);
+		}
+		for(Integer x : materials) {
+			if(!cards.contains(x))
+				ret = false;
+		}
+		return ret;
 	}
 	
 	public List<Card> generateLeveled(int avg) {

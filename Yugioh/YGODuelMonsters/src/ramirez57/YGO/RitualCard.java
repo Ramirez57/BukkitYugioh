@@ -65,7 +65,7 @@ public class RitualCard extends SpellCard {
 			duelist.selectedCard = mc;
 			duelist.selectedZone = zone;
 			duelist.phase = 2;
-			duel.changeTerrain(duel.terrain);
+			duel.applyTerrain(duel.terrain, mc, false);
 		}
 	}
 }
