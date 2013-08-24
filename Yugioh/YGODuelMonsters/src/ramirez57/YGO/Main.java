@@ -1,11 +1,14 @@
 package ramirez57.YGO;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.Player; 
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -18,7 +21,9 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.Stack;
 import java.util.UUID;
 
@@ -59,6 +64,7 @@ public class Main extends JavaPlugin implements Listener {
 		PluginVars.loadStarterDeck(new File(this.getDataFolder(), "starter.yml"));
 		PluginVars.load();
 		Fusion.loadFusions(new File(this.getDataFolder(), "fusions.yml"));
+		this.getLogger().info("Cleaned " + this.clean() + " decks");
 	}
 
 	public void onDisable() {
@@ -117,6 +123,38 @@ public class Main extends JavaPlugin implements Listener {
 	@EventHandler
 	public void duelreq(PlayerInteractEntityEvent e) {
 		Player p = e.getPlayer();
+		if(PluginVars.isAdminEditor(p)) {
+			if(e.getRightClicked().getType() == EntityType.PLAYER) {
+				if(Player.class.isInstance(e.getRightClicked())) {
+					Player victim = Player.class.cast(e.getRightClicked());
+					try {
+						DeckEditor.open(p, victim);
+					} catch (NoDeckException e1) {
+						p.sendMessage("That player does not have a deck.");
+					}
+				}
+			} else if(PluginVars.hasDeck(e.getRightClicked().getUniqueId())) {
+				try {
+					DeckEditorNPC.open(p, e.getRightClicked().getUniqueId());
+				} catch (NoDeckException e1) {
+					PluginVars.npc_decks.put(e.getRightClicked().getUniqueId(), new ArrayList<Integer>());
+					try {
+						DeckEditorNPC.open(p, e.getRightClicked().getUniqueId());
+					} catch (NoDeckException e2) {
+						e.setCancelled(true);
+					}
+				}
+			} else {
+				PluginVars.npc_decks.put(e.getRightClicked().getUniqueId(), new ArrayList<Integer>());
+				try {
+					DeckEditorNPC.open(p, e.getRightClicked().getUniqueId());
+				} catch (NoDeckException e2) {
+					e.setCancelled(true);
+				}
+			}
+			e.setCancelled(true);
+			return;
+		}
 		if(e.getRightClicked().getType() == EntityType.VILLAGER) {
 			if(!PluginVars.isDuelist(e.getRightClicked().getUniqueId())) {
 				if(!PluginVars.hasDeck(p)) {
@@ -127,22 +165,25 @@ public class Main extends JavaPlugin implements Listener {
 			}
 		}
 		if(PluginVars.duel_mode.contains(p)) {
-			if(e.getRightClicked().getType() == EntityType.VILLAGER) {
+			if(e.getRightClicked().getType() != EntityType.PLAYER) {
 				UUID uuid = e.getRightClicked().getUniqueId();
-				e.setCancelled(true);
-				new NPCGenerator().generate(uuid);
+				if(e.getRightClicked().getType() == EntityType.VILLAGER)
+					new NPCGenerator().generate(uuid);
 				if(PluginVars.isDuelist(uuid)) {
-					try {
-						if(DeckGenerator.checkDeckInt(PluginVars.getDeckFor(p))) {
-							Inventory i = Bukkit.createInventory(null, 54, "Duel Monsters");
-							Duel duel = PluginVars.createDuel(e.getPlayer(), i, null, null, e.getRightClicked().getUniqueId());
-							e.getPlayer().openInventory(i);
-							duel.startDuel();
-						} else {
-							p.sendMessage("Deck is illegal! Please re-arrange it before dueling.");
+					if(e.getRightClicked().getType() == EntityType.VILLAGER || PluginVars.hasDeck(uuid)) {
+						e.setCancelled(true);
+						try {
+							if(DeckGenerator.checkDeckInt(PluginVars.getDeckFor(p))) {
+								Inventory i = Bukkit.createInventory(null, 54, "Duel Monsters");
+								Duel duel = PluginVars.createDuel(e.getPlayer(), i, null, null, e.getRightClicked().getUniqueId());
+								e.getPlayer().openInventory(i);
+								duel.startDuel();
+							} else {
+								p.sendMessage("Deck is illegal! Please re-arrange it before dueling.");
+							}
+						} catch (NoDeckException e1) {
+							p.sendMessage("You don't have a deck!");
 						}
-					} catch (NoDeckException e1) {
-						p.sendMessage("You don't have a deck!");
 					}
 				} else {
 					if(PluginVars.hasDeck(p)) {
@@ -443,9 +484,62 @@ public class Main extends JavaPlugin implements Listener {
 				} else {
 					sender.sendMessage("/ygoadmin givesc [player] [amount]");
 				}
+			} else if(args[0].equalsIgnoreCase("deck")) {
+				if(Player.class.isInstance(sender)) {
+					Player p = (Player) sender;
+					if(PluginVars.isAdminEditor(p)) {
+						PluginVars.removeAdminEditor(p);
+						p.sendMessage("Admin Editor: OFF");
+					} else {
+						PluginVars.addAdminEditor(p);
+						p.sendMessage("Admin Editor: ON");
+					}
+				}
+			} else if(args[0].equalsIgnoreCase("generate")) {
+				if(Player.class.isInstance(sender)) {
+					if(args.length == 2) {
+						Player p = Player.class.cast(sender);
+						EntityType type = EntityType.fromName(args[1]);
+						if(type == null) {
+							p.sendMessage("Invalid entity name: " + args[1]);
+						} else {
+							Entity ent = p.getWorld().spawnEntity(p.getLocation(), type);
+							new NPCGenerator().generate(ent.getUniqueId());
+						}
+					} else {
+						sender.sendMessage("/ygoadmin generate [entity_type]");
+					}
+				}
+			} else if(args[0].equalsIgnoreCase("clean")) {
+				sender.sendMessage(ChatColor.GREEN + "Cleaned " + this.clean() + " decks");
 			}
 		}
 		return true;
+	}
+	
+	public int clean() {
+		int cleaned = 0;
+		Set<UUID> _saves = PluginVars.npc_decks.keySet();
+		List<UUID> saves = new ArrayList<UUID>();
+		for(UUID uuid : _saves) {
+			saves.add(uuid);
+		}
+		List<World> worlds = Bukkit.getWorlds();
+		List<Entity> entities = null;
+		for(World world : worlds) {
+			entities = world.getEntities();
+			for(Entity e : entities) {
+				saves.remove(e.getUniqueId());
+			}
+		}
+		Iterator<UUID> iterator = saves.iterator();
+		while(iterator.hasNext()) {
+			UUID uuid = iterator.next();
+			PluginVars.npc_decks.remove(uuid);
+			cleaned++;
+		}
+		PluginVars.save();
+		return cleaned;
 	}
 	
 	public void helpMenu(Player player) {
@@ -458,6 +552,9 @@ public class Main extends JavaPlugin implements Listener {
 		sender.sendMessage("/ygoadmin get [password] - Get a card by its password");
 		sender.sendMessage("/ygoadmin give [player] [password] - Give a card to a player");
 		sender.sendMessage("/ygoadmin givesc [player] [password] - Give starchips to a player");
+		sender.sendMessage("/ygoadmin deck - Toggle admin deck editor");
+		sender.sendMessage("/ygoadmin generate [entity_type] - Generate a duelist");
+		sender.sendMessage("/ygoadmin clean - Clean up any unused NPC decks");
 	}
 	
 	public void helpMenu(CommandSender sender) {

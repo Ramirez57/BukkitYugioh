@@ -1,9 +1,9 @@
-name: Yugioh
-version: B0.1.2_MC1.6.2_R0.1
+name: YugiohFM
+version: B0.2.1_MC1.6.2_R0.1
 author: Ramirez57
 main: ramirez57.YGO.Main
 description: Yu-Gi-Oh! Duel Monsters for Minecraft!
-prefix: YGO
+prefix: YGOFM
 commands:
   ygo:
     description: Master command for players

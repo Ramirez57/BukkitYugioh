@@ -297,6 +297,13 @@ public class Duelist {
 		int c;
 		Inventory i = this.duelInterface;
 		ItemStack item;
+		if(terrain.hasTexture()) {
+			for(c = 0; c < 5; c++) {
+				for(int d = 1; d < 5; d++) {
+					i.setItem((d*9)+c, terrain.getTexture());
+				}
+			}
+		}
 		if(this.phase == 0) {
 			item = new ItemStack(Material.SIGN);
 			Main.setItemName(item, "Info");

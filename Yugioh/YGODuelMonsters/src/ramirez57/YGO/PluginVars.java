@@ -30,6 +30,7 @@ public class PluginVars {
 	public static File saveData = null;
 	public static List<List<Integer>> starter_sets = new ArrayList<List<Integer>>();
 	public static List<Player> duel_mode = new ArrayList<Player>();
+	public static List<Player> admin_edit = new ArrayList<Player>();
 	public static HashMap<UUID, List<Integer>> npc_decks = new HashMap<UUID, List<Integer>>();
 	public static List<UUID> npc_nonduelists = new ArrayList<UUID>();
 	public static HashMap<String, Integer> player_chips = new HashMap<String, Integer>();
@@ -38,6 +39,18 @@ public class PluginVars {
 	
 	public static void newYgoPlayer(Player p) {
 		PluginVars.player_decks.put(p.getName(), new Stack<Integer>());
+	}
+	
+	public static void addAdminEditor(Player p) {
+		PluginVars.admin_edit.add(p);
+	}
+	
+	public static boolean isAdminEditor(Player p) {
+		return PluginVars.admin_edit.contains(p);
+	}
+	
+	public static boolean removeAdminEditor(Player p) {
+		return PluginVars.admin_edit.remove(p);
 	}
 	
 	public static boolean ignoreRequests(Player p) {
@@ -189,6 +202,13 @@ public class PluginVars {
 	
 	public static List<Integer> getDeckFor(Player p) throws NoDeckException {
 		List<Integer> deck = PluginVars.player_decks.get(p.getName());
+		if(deck == null)
+			throw new NoDeckException();
+		return deck;
+	}
+	
+	public static List<Integer> getDeckFor(UUID uuid) throws NoDeckException {
+		List<Integer> deck = PluginVars.npc_decks.get(uuid);
 		if(deck == null)
 			throw new NoDeckException();
 		return deck;

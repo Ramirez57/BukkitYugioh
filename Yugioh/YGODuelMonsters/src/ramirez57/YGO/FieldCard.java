@@ -2,13 +2,15 @@ package ramirez57.YGO;
 
 import java.util.List;
 
+import org.bukkit.Material;
+
 public class FieldCard extends SpellCard {
 	public Terrain terrain;
 	
-	public static FieldCard create(String name, List<MonsterType> favors, List<MonsterType> unfavors) {
+	public static FieldCard create(String name, List<MonsterType> favors, List<MonsterType> unfavors, Material texture) {
 		FieldCard fc = new FieldCard();
 		fc.name = name;
-		fc.terrain = Terrain.make(name, favors, unfavors);
+		fc.terrain = Terrain.make(name, favors, unfavors, texture);
 		return fc;
 	}
 	

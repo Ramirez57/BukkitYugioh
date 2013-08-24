@@ -25,7 +25,7 @@ public class DeckEditor {
 		de.editing = editor;
 		de.deckOwner = deckOwner;
 		de.deck = PluginVars.getDeckFor(deckOwner);
-		de.inventory = Bukkit.getServer().createInventory(editor, 45);
+		de.inventory = Bukkit.getServer().createInventory(editor, 45, "Deck Editor");
 		editor.openInventory(de.inventory);
 		PluginVars.editing.put(editor, de);
 		de.updateInterface();

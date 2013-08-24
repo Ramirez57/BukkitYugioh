@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 public class Card implements Cloneable {
@@ -157,7 +158,7 @@ public class Card implements Cloneable {
 				for(i=0;i < szfavors.size(); i++) {
 					unfavors.add(MonsterType.fromString(szfavors.get(i)));
 				}
-				fc = FieldCard.create(config.getString(prefix + ".name"), favors, unfavors);
+				fc = FieldCard.create(config.getString(prefix + ".name"), favors, unfavors, Material.matchMaterial(config.getString(prefix + ".texture")));
 				fc.id = config.getInt(prefix + ".id");
 				fc.desc = Card.splitEvery(16, config.getString(prefix + ".description"));
 				fc.password = prefix;
