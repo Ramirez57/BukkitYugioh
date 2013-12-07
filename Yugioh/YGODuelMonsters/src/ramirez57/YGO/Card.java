@@ -19,7 +19,7 @@ public class Card implements Cloneable {
 	public boolean obtainable;
 	public int bonus;
 	public int id;
-	public Duelist defeatedBy;
+	//public Duelist defeatedBy; Do not use
 	public Trait[] traits;
 	
 	public static Card cards[];

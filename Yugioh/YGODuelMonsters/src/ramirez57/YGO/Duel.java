@@ -197,6 +197,7 @@ public class Duel {
 						duelist.fusion_mat.remove(0);
 						duelist.fusion_mat.remove(0);
 						duelist.fusion_mat.insertElementAt(result, 0);
+						
 					}
 					duelist.selectedCard = result;
 					duelist.fusion_mat.clear();

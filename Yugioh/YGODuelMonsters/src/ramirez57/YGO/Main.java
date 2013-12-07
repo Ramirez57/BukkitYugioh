@@ -499,7 +499,7 @@ public class Main extends JavaPlugin implements Listener {
 				if(Player.class.isInstance(sender)) {
 					if(args.length == 2) {
 						Player p = Player.class.cast(sender);
-						EntityType type = EntityType.fromName(args[1]);
+						EntityType type = EntityType.valueOf(args[1]);
 						if(type == null) {
 							p.sendMessage("Invalid entity name: " + args[1]);
 						} else {
@@ -551,7 +551,7 @@ public class Main extends JavaPlugin implements Listener {
 		sender.sendMessage("/ygoadmin help - Bring up this menu");
 		sender.sendMessage("/ygoadmin get [password] - Get a card by its password");
 		sender.sendMessage("/ygoadmin give [player] [password] - Give a card to a player");
-		sender.sendMessage("/ygoadmin givesc [player] [password] - Give starchips to a player");
+		sender.sendMessage("/ygoadmin givesc [player] [amount] - Give starchips to a player");
 		sender.sendMessage("/ygoadmin deck - Toggle admin deck editor");
 		sender.sendMessage("/ygoadmin generate [entity_type] - Generate a duelist");
 		sender.sendMessage("/ygoadmin clean - Clean up any unused NPC decks");

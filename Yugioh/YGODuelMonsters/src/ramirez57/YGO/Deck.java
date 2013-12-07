@@ -9,7 +9,7 @@ import org.bukkit.entity.Player;
 
 public class Deck {
 	public Stack<Card> cards;
-	public Duelist owner;
+	//public Duelist owner; Do not use
 
 	public void shuffle() {
 		Collections.shuffle(cards, PluginVars.random);
@@ -18,8 +18,7 @@ public class Deck {
 	public static Deck fromUUID(Duelist d, UUID uuid) {
 		Deck deck = new Deck();
 		deck.cards = new Stack<Card>();
-		deck.owner = d;
-		Player p = deck.owner.player;
+		Player p = d.player;
 		if (p == null) {
 			if (PluginVars.hasDeck(uuid)) {
 				for (Integer card : PluginVars.npc_decks.get(uuid)) {
@@ -38,8 +37,7 @@ public class Deck {
 	public static Deck fromPlayer(Duelist d) throws NoDeckException {
 		Deck deck = new Deck();
 		deck.cards = new Stack<Card>();
-		deck.owner = d;
-		Player p = deck.owner.player;
+		Player p = d.player;
 		if (p == null) {
 			List<Card> npcdeck = new DeckGenerator().generateThemed();
 			for (int i = 0; i < 40; i++) {
