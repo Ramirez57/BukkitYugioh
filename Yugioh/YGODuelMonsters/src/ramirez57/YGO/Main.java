@@ -6,6 +6,7 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player; 
@@ -47,6 +48,12 @@ public class Main extends JavaPlugin implements Listener {
 		this.dueling = new Stack<String>();
 		GuardianStar.init();
 		PluginVars.dirCards = new File(this.getDataFolder(), "cards");
+		PluginVars.configFile = new File(this.getDataFolder(), "config.yml");
+		PluginVars.config = YamlConfiguration.loadConfiguration(PluginVars.configFile);
+		if(!PluginVars.configFile.exists()) {
+			PluginVars.config.set("hard_mode", false);
+			PluginVars.config.set("allow_commu_fusion", true);
+		}
 		PluginVars.saveData = new File(this.getDataFolder(), "SAVEDATA");
 		PluginVars.logger = this.getLogger();
 		PluginVars.plugin = this;
@@ -286,6 +293,13 @@ public class Main extends JavaPlugin implements Listener {
 				PluginVars.editing.get(p).input(e.getRawSlot(), e.getClick());
 				e.setCancelled(true);
 			}
+		} else if(PluginVars.commu_mode.get(p) != null) {
+			if(e.getRawSlot() == InventoryView.OUTSIDE) {
+				PluginVars.commu_mode.get(p).close(false);
+			} else {
+				PluginVars.commu_mode.get(p).input(e.getRawSlot(), e.getClick());
+				e.setCancelled(true);
+			}
 		}
 	}
 
@@ -295,13 +309,18 @@ public class Main extends JavaPlugin implements Listener {
 		if(PluginVars.editing.get(p) != null) {
 			PluginVars.editing.get(p).close();
 		}
-		try {
-			Duel duel = Duelist.getDuelFor(p);
-			duel.endDuel(duel.getDuelistFromPlayer(p).opponent, WinReason.SURRENDER);
-		} catch (NotDuelingException e1) {
-			// TODO Auto-generated catch block
+		if(PluginVars.commu_mode.get(p) != null) {
+			PluginVars.commu_mode.get(p).close(false);
 		}
-		this.dueling.removeElement(p.getName());
+		if(PluginVars.isDueling(p)) {
+			try {
+				Duel duel = Duelist.getDuelFor(p);
+				duel.endDuel(duel.getDuelistFromPlayer(p).opponent, WinReason.SURRENDER);
+			} catch (NotDuelingException e1) {
+				// TODO Auto-generated catch block
+			}
+			this.dueling.removeElement(p.getName());
+		}
 	}
 
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -438,6 +457,28 @@ public class Main extends JavaPlugin implements Listener {
 					} else
 						p.sendMessage("You do not have any requests.");
 				}
+			} else if(args[0].equalsIgnoreCase("commu")) {
+				if(!PluginVars.allow_commu_fusion) {
+					sender.sendMessage("Commuincation fusion is disabled.");
+				} else if(Player.class.isInstance(sender)) {
+					Player p = Player.class.cast(sender);
+					if(args.length != 2) {
+						p.sendMessage("/ygo commu [player name]");
+					} else {
+						Player p2 = Bukkit.getServer().getPlayer(args[1]);
+						if(p2 == null) {
+							p.sendMessage("That player is not online.");
+						} else if(p == p2) {
+							p.sendMessage("You cannot commu fusion with yourself.");
+						} else {
+							if(p.getLocation().distance(p2.getLocation()) <= 5.5d) {
+								PluginVars.commu_mode.put(p, CommuFusion.open(p, p2));
+							} else {
+								p.sendMessage(p2.getDisplayName() + ChatColor.WHITE + " is not close enough to you.");
+							}
+						}
+					}
+				}
 			}
 		} else if(cmd.getName().equalsIgnoreCase("ygoadmin")) {
 			if(args.length <= 0) {
@@ -568,6 +609,8 @@ public class Main extends JavaPlugin implements Listener {
 		sender.sendMessage("/ygo starchips - Check starchip count");
 		sender.sendMessage("/ygo convert - Convert PAPER to Duel Monsters card");
 		sender.sendMessage("/ygo check [password] - Check card password cost");
+		if(PluginVars.allow_commu_fusion)
+			sender.sendMessage("/ygo commu - Communication fusion with player");
 	}
 
 }

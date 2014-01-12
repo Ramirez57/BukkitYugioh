@@ -119,6 +119,40 @@ public class AI implements Runnable {
 					mc = oppmonsters.pop();
 					fusions = AI.howToDefeat(mc, duel, duelist);
 					if(fusions.empty()) {
+						if(PluginVars.hard_mode) {
+							// AI IS A CHEATER LOL
+							oppmonsters = AI.getCardList(duelist.opponent);
+							mc = oppmonsters.pop();
+							for(int p = 0; p < duelist.deck.cards.size(); p++) {
+								card = duelist.deck.cards.get(p);
+								if(MonsterCard.class.isInstance(card)) {
+									MonsterCard mymc = MonsterCard.class.cast(card);
+									//swaps for a better card
+									if(mc.position == MonsterPosition.DEFENSE) {
+										if(mymc.atk > mc.def + mc.bonus) {
+											Card card2 = duelist.deck.cards.get(p);
+											duelist.deck.cards.set(p, duelist.hand.cards.get(0));
+											duelist.hand.cards.set(0, card2);
+											canplay.push(card2);
+											AI.playFrom(canplay, duel, duelist, timer, false, null);
+											goal = AI.BATTLE;
+											break;
+										}
+									} else {
+										if(mymc.atk > mc.atk + mc.bonus) {
+											Card card2 = duelist.deck.cards.get(p);
+											duelist.deck.cards.set(p, duelist.hand.cards.get(0));
+											duelist.hand.cards.set(0, card2);
+											canplay.push(card2);
+											AI.playFrom(canplay, duel, duelist, timer, false, null);
+											goal = AI.BATTLE;
+											break;
+										}
+									}
+								}
+							}
+							if(goal == AI.BATTLE) continue; 
+						}
 						goal = AI.DEFEND;
 						continue;
 					} else {
@@ -497,6 +531,7 @@ public class AI implements Runnable {
 		} else {
 			selection = duelist.hand.getCardPos(canplay.get(PluginVars.random
 					.nextInt(canplay.size())));
+			if(selection == -1) selection = 0;
 		}
 		Card card = duelist.hand.cards.elementAt(selection);
 		AI.doInput(timer, duel, duelist, 45 + selection, ClickType.LEFT);

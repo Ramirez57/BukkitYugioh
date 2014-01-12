@@ -28,6 +28,8 @@ public class PluginVars {
 	public static HashMap<String, List<Integer>> player_decks = new HashMap<String, List<Integer>>();
 	public static HashMap<String, Stack<Integer>> player_trunks;
 	public static File saveData = null;
+	public static File configFile = null;
+	public static YamlConfiguration config = null;
 	public static List<List<Integer>> starter_sets = new ArrayList<List<Integer>>();
 	public static List<Player> duel_mode = new ArrayList<Player>();
 	public static List<Player> admin_edit = new ArrayList<Player>();
@@ -36,6 +38,9 @@ public class PluginVars {
 	public static HashMap<String, Integer> player_chips = new HashMap<String, Integer>();
 	public static List<DuelRequest> requests = new ArrayList<DuelRequest>();
 	public static List<String> ignore_requests = new ArrayList<String>();
+	public static HashMap<Player, CommuFusion> commu_mode = new HashMap<Player, CommuFusion>();
+	public static boolean hard_mode = false;
+	public static boolean allow_commu_fusion = true;
 	
 	public static void newYgoPlayer(Player p) {
 		PluginVars.player_decks.put(p.getName(), new Stack<Integer>());
@@ -171,6 +176,12 @@ public class PluginVars {
 	
 	@SuppressWarnings("unchecked")
 	public static void load() {
+		PluginVars.hard_mode = PluginVars.config.getBoolean("hard_mode", false);
+		PluginVars.allow_commu_fusion = PluginVars.config.getBoolean("allow_commu_fusion", true);
+		try {
+			PluginVars.config.save(PluginVars.configFile);
+		} catch (IOException e1) {
+		}
 		if(!saveData.exists()) {
 			try {
 				saveData.createNewFile();
