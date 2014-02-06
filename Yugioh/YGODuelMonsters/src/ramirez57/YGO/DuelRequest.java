@@ -19,7 +19,7 @@ public class DuelRequest implements Runnable {
 		if(!PluginVars.hasDeck(this.requested)) {
 			this.requester.sendMessage("That player does not have a deck.");
 		} else if(!PluginVars.hasDeck(this.requester)) {
-			this.requested.sendMessage("You do not have a deck.");
+			this.requester.sendMessage("You do not have a deck.");
 		} else if(!PluginVars.hasRequest(this.requested)) {
 			PluginVars.requests.add(this);
 			this.requester.sendMessage("Sent request to player " + this.requested.getDisplayName());

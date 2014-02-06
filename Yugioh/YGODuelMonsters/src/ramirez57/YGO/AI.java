@@ -396,12 +396,12 @@ public class AI implements Runnable {
 					mycards.push(workspace);
 				} else {
 					//search for equips
+					workspace.push(mymc);
 					for(d = 0; d < duelist.hand.size(); d++) {
 						if(EquipCard.class.isInstance(duelist.hand.cards.elementAt(d))) {
 							EquipCard ec = EquipCard.class.cast(duelist.hand.cards.elementAt(d));
 							if(mymc.canEquip(ec)) {
 								if(pow + ec.incrementBy >= number) {
-									workspace.push(mymc);
 									workspace.push(ec);
 									mycards.push(workspace);
 								}

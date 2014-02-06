@@ -4,6 +4,7 @@ import java.util.Iterator;
 import java.util.Stack;
 import java.util.UUID;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -26,11 +27,27 @@ public class Duelist {
 	public int selectedZone;
 	public Stack<Card> rewards;
 	public int swords;
+	public int trigger_trap;
+	public int card_destruction;
+	public int pure_magic;
+	public int equip_magic;
+	public int initiate_fusion;
+	public int combo_plays;
+	public int change_field;
+	public int turns;
 	
 	public Duelist() {
 		this.fusion_mat = new Stack<Card>();
 		this.rewards = new Stack<Card>();
 		this.swords = 0;
+		this.card_destruction = 0;
+		this.trigger_trap = 0;
+		this.pure_magic = 0;
+		this.initiate_fusion = 0;
+		this.combo_plays = 0;
+		this.equip_magic = 0;
+		this.change_field = 0;
+		this.turns = 0;
 	}
 	
 	public static Duelist fromPlayer(Player p, Inventory interf, UUID uuid) throws NoDeckException {
@@ -135,61 +152,61 @@ public class Duelist {
 			MonsterCard mc = MonsterCard.class.cast(c);
 			Main.setItemName(item, mc.name);
 			Main.giveLore(item, 5+mc.desc.length);
-			Main.setItemData(item, 0, "[Monster] " + mc.type.toString() + "/" + mc.attribute.toString());
+			Main.setItemData(item, 0, ChatColor.GOLD + "[Monster] " + mc.type.toString() + "/" + mc.attribute.toString());
 			String s = "[";
 			for(int l = 0; l < mc.level; l++) {
 				s += '*';
 			}
 			s+="] ";
 			s+=(mc.getAtk()) + "/" + (mc.getDef());
-			Main.setItemData(item, 1, s);
+			Main.setItemData(item, 1, ChatColor.GOLD + s);
 			if(c.faceup) {
 				s = "Face-up ";
 			} else {
 				s = "Face-down ";
 			}
-			Main.setItemData(item, 2, (s+mc.position.toString()));
-			Main.setItemData(item, 3, mc.star.toString());
-			Main.setItemData(item, 4, "+--------------+");
+			Main.setItemData(item, 2, ChatColor.GOLD + (s+mc.position.toString()));
+			Main.setItemData(item, 3, ChatColor.GOLD + mc.star.toString());
+			Main.setItemData(item, 4, ChatColor.GOLD + "+--------------+");
 			for(i = 0; i < mc.desc.length; i++) {
-				Main.setItemData(item, 5+i, mc.desc[i]);
+				Main.setItemData(item, 5+i, ChatColor.GOLD + mc.desc[i]);
 			}
 		} else if(TrapCard.class.isInstance(c)) {
 			TrapCard tc = TrapCard.class.cast(c);
 			Main.setItemName(item, tc.name);
 			Main.giveLore(item, 2+tc.desc.length);
-			Main.setItemData(item, 0, "[Trap/Normal]");
+			Main.setItemData(item, 0, ChatColor.RED + "[Trap/Normal]");
 			for(i = 0; i < tc.desc.length; i++) {
-				Main.setItemData(item, 1+i, tc.desc[i]);
+				Main.setItemData(item, 1+i, ChatColor.RED + tc.desc[i]);
 			}
 			if(tc.faceup)
-				Main.setItemData(item, 1+tc.desc.length, "Face-up");
+				Main.setItemData(item, 1+tc.desc.length, ChatColor.RED + "Face-up");
 			else
-				Main.setItemData(item, 1+tc.desc.length, "Face-down");
+				Main.setItemData(item, 1+tc.desc.length, ChatColor.RED + "Face-down");
 		} else if(SpellCard.class.isInstance(c)) {
 			SpellCard sc = SpellCard.class.cast(c);
 			Main.setItemName(item, sc.name);
 			Main.giveLore(item, 2+sc.desc.length);
-			Main.setItemData(item, 0, "[Spell/Normal]");
+			Main.setItemData(item, 0, ChatColor.DARK_GREEN + "[Spell/Normal]");
 			for(i = 0; i < sc.desc.length; i++) {
-				Main.setItemData(item, 1+i, sc.desc[i]);
+				Main.setItemData(item, 1+i, ChatColor.DARK_GREEN + sc.desc[i]);
 			}
 			if(sc.faceup)
-				Main.setItemData(item, 1+sc.desc.length, "Face-up");
+				Main.setItemData(item, 1+sc.desc.length, ChatColor.DARK_GREEN + "Face-up");
 			else
-				Main.setItemData(item, 1+sc.desc.length, "Face-down");
+				Main.setItemData(item, 1+sc.desc.length, ChatColor.DARK_GREEN + "Face-down");
 		} else if(EquipCard.class.isInstance(c)) {
 			EquipCard ec = EquipCard.class.cast(c);
 			Main.setItemName(item, ec.name);
 			Main.giveLore(item, 2+ec.desc.length);
-			Main.setItemData(item, 0, "[Spell/Equip]");
+			Main.setItemData(item, 0, ChatColor.DARK_AQUA + "[Spell/Equip]");
 			for(i = 0; i < ec.desc.length; i++) {
-				Main.setItemData(item, 1+i, ec.desc[i]);
+				Main.setItemData(item, 1+i, ChatColor.DARK_AQUA + ec.desc[i]);
 			}
 			if(ec.faceup)
-				Main.setItemData(item, 1+ec.desc.length, "Face-up");
+				Main.setItemData(item, 1+ec.desc.length, ChatColor.DARK_GREEN + "Face-up");
 			else
-				Main.setItemData(item, 1+ec.desc.length, "Face-down");
+				Main.setItemData(item, 1+ec.desc.length, ChatColor.DARK_GREEN + "Face-down");
 		}
 	}
 	
@@ -200,45 +217,45 @@ public class Duelist {
 			Main.setItemName(item, mc.name);
 			Main.giveLore(item, 5+mc.desc.length);
 			Main.setItemData(item, 0, "#" + c.id);
-			Main.setItemData(item, 1, "[Monster] " + mc.type.toString() + "/" + mc.attribute.toString());
+			Main.setItemData(item, 1, ChatColor.GOLD + "[Monster] " + mc.type.toString() + "/" + mc.attribute.toString());
 			String s = "[";
 			for(int l = 0; l < mc.level; l++) {
 				s += '*';
 			}
 			s+="] ";
 			s+=(mc.getAtk()) + "/" + (mc.getDef());
-			Main.setItemData(item, 2, s);
-			Main.setItemData(item, 3, mc.stars[0].toString() + " / " + mc.stars[1].toString());
-			Main.setItemData(item, 4, "+--------------+");
+			Main.setItemData(item, 2, ChatColor.GOLD + s);
+			Main.setItemData(item, 3, ChatColor.GOLD + mc.stars[0].toString() + " / " + mc.stars[1].toString());
+			Main.setItemData(item, 4, ChatColor.GOLD + "+--------------+");
 			for(i = 0; i < mc.desc.length; i++) {
-				Main.setItemData(item, 5+i, mc.desc[i]);
+				Main.setItemData(item, 5+i, ChatColor.GOLD + mc.desc[i]);
 			}
 		} else if(TrapCard.class.isInstance(c)) {
 			TrapCard tc = TrapCard.class.cast(c);
 			Main.setItemName(item, tc.name);
 			Main.giveLore(item, 2+tc.desc.length);
 			Main.setItemData(item, 0, "#" + c.id);
-			Main.setItemData(item, 1, "[Trap/Normal]");
+			Main.setItemData(item, 1, ChatColor.RED + "[Trap/Normal]");
 			for(i = 0; i < tc.desc.length; i++) {
-				Main.setItemData(item, 2+i, tc.desc[i]);
+				Main.setItemData(item, 2+i, ChatColor.RED + tc.desc[i]);
 			}
 		} else if(SpellCard.class.isInstance(c)) {
 			SpellCard sc = SpellCard.class.cast(c);
 			Main.setItemName(item, sc.name);
 			Main.giveLore(item, 2+sc.desc.length);
 			Main.setItemData(item, 0, "#" + c.id);
-			Main.setItemData(item, 1, "[Spell/Normal]");
+			Main.setItemData(item, 1, ChatColor.DARK_GREEN + "[Spell/Normal]");
 			for(i = 0; i < sc.desc.length; i++) {
-				Main.setItemData(item, 2+i, sc.desc[i]);
+				Main.setItemData(item, 2+i, ChatColor.DARK_GREEN + sc.desc[i]);
 			}
 		} else if(EquipCard.class.isInstance(c)) {
 			EquipCard ec = EquipCard.class.cast(c);
 			Main.setItemName(item, ec.name);
 			Main.giveLore(item, 2+ec.desc.length);
 			Main.setItemData(item, 0, "#" + c.id);
-			Main.setItemData(item, 1, "[Spell/Equip]");
+			Main.setItemData(item, 1, ChatColor.DARK_AQUA + "[Spell/Equip]");
 			for(i = 0; i < ec.desc.length; i++) {
-				Main.setItemData(item, 2+i, ec.desc[i]);
+				Main.setItemData(item, 2+i, ChatColor.DARK_AQUA + ec.desc[i]);
 			}
 		}
 	}
@@ -250,42 +267,42 @@ public class Duelist {
 			MonsterCard mc = MonsterCard.class.cast(c);
 			Main.setItemName(item, mc.name);
 			Main.giveLore(item, 4+mc.desc.length);
-			Main.setItemData(item, 0, "[Monster] " + mc.type.toString() + "/" + mc.attribute.toString());
+			Main.setItemData(item, 0, ChatColor.GOLD + "[Monster] " + mc.type.toString() + "/" + mc.attribute.toString());
 			String s = "[";
 			for(int l = 0; l < mc.level; l++) {
 				s += '*';
 			}
 			s+="] ";
 			s+=(mc.getAtk()) + "/" + (mc.getDef());
-			Main.setItemData(item, 1, s);
-			Main.setItemData(item, 2, mc.stars[0].toString() + " / " + mc.stars[1].toString());
-			Main.setItemData(item, 3, "+--------------+");
+			Main.setItemData(item, 1, ChatColor.GOLD + s);
+			Main.setItemData(item, 2, ChatColor.GOLD + mc.stars[0].toString() + " / " + mc.stars[1].toString());
+			Main.setItemData(item, 3, ChatColor.GOLD + "+--------------+");
 			for(i = 0; i < mc.desc.length; i++) {
-				Main.setItemData(item, 4+i, mc.desc[i]);
+				Main.setItemData(item, 4+i, ChatColor.GOLD + mc.desc[i]);
 			}
 		} else if(TrapCard.class.isInstance(c)) {
 			TrapCard tc = TrapCard.class.cast(c);
 			Main.setItemName(item, tc.name);
 			Main.giveLore(item, 1+tc.desc.length);
-			Main.setItemData(item, 0, "[Trap/Normal]");
+			Main.setItemData(item, 0, ChatColor.RED + "[Trap/Normal]");
 			for(i = 0; i < tc.desc.length; i++) {
-				Main.setItemData(item, 1+i, tc.desc[i]);
+				Main.setItemData(item, 1+i, ChatColor.RED + tc.desc[i]);
 			}
 		} else if(SpellCard.class.isInstance(c)) {
 			SpellCard sc = SpellCard.class.cast(c);
 			Main.setItemName(item, sc.name);
 			Main.giveLore(item, 1+sc.desc.length);
-			Main.setItemData(item, 0, "[Spell/Normal]");
+			Main.setItemData(item, 0, ChatColor.DARK_GREEN + "[Spell/Normal]");
 			for(i = 0; i < sc.desc.length; i++) {
-				Main.setItemData(item, 1+i, sc.desc[i]);
+				Main.setItemData(item, 1+i, ChatColor.DARK_GREEN + sc.desc[i]);
 			}
 		} else if(EquipCard.class.isInstance(c)) {
 			EquipCard ec = EquipCard.class.cast(c);
 			Main.setItemName(item, ec.name);
 			Main.giveLore(item, 1+ec.desc.length);
-			Main.setItemData(item, 0, "[Spell/Equip]");
+			Main.setItemData(item, 0, ChatColor.DARK_AQUA + "[Spell/Equip]");
 			for(i = 0; i < ec.desc.length; i++) {
-				Main.setItemData(item, 1+i, ec.desc[i]);
+				Main.setItemData(item, 1+i, ChatColor.DARK_AQUA + ec.desc[i]);
 			}
 		}
 	}

@@ -3,6 +3,7 @@ package ramirez57.YGO;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.Stack;
@@ -39,6 +40,7 @@ public class PluginVars {
 	public static List<DuelRequest> requests = new ArrayList<DuelRequest>();
 	public static List<String> ignore_requests = new ArrayList<String>();
 	public static HashMap<Player, CommuFusion> commu_mode = new HashMap<Player, CommuFusion>();
+	public static HashMap<Player, Spectator> spectating = new HashMap<Player, Spectator>();
 	public static boolean hard_mode = false;
 	public static boolean allow_commu_fusion = true;
 	
@@ -253,5 +255,17 @@ public class PluginVars {
 
 	public static boolean isDueling(Player p) {
 		return PluginVars.plugin.dueling.contains(p.getName());
+	}
+	
+	public static boolean closeSpectators(Player p, boolean won, WinReason reason) {
+		Iterator<Spectator> iterator = PluginVars.spectating.values().iterator();
+		Spectator spec = null;
+		while(iterator.hasNext()) {
+			spec = iterator.next();
+			if(spec.duelist == p) {
+				spec.close(won, reason);
+			}
+		}
+		return true;
 	}
 }

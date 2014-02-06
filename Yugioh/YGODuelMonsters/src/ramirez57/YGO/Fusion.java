@@ -53,6 +53,9 @@ public class Fusion {
 				this.result = specificfusions.get(cp).freshCopy();
 				this.discardBoth(destroy);
 				duel.applyTerrain(duel.terrain, this.result, false);
+				if(destroy) {
+					duelist.initiate_fusion++;
+				}
 				return this.result;
 			}
 		}
@@ -69,12 +72,18 @@ public class Fusion {
 							this.discardBoth(destroy);
 							this.result = mc.freshCopy();
 							duel.applyTerrain(duel.terrain, this.result, false);
+							if(destroy) {
+								duelist.initiate_fusion++;
+							}
 							return this.result;
 						}
 					} else {
 						this.discardBoth(destroy);
 						this.result = results.get(c).freshCopy();
 						duel.applyTerrain(duel.terrain, this.result, false);
+						if(destroy) {
+							duelist.initiate_fusion++;
+						}
 						return this.result;
 					}
 				}
@@ -103,12 +112,18 @@ public class Fusion {
 									this.discardBoth(destroy);
 									this.result = mc.freshCopy();
 									duel.applyTerrain(duel.terrain, this.result, false);
+									if(destroy) {
+										duelist.initiate_fusion++;
+									}
 									return this.result;
 								}
 							} else {
 								this.discardBoth(destroy);
 								this.result = results.get(c).freshCopy();
 								duel.applyTerrain(duel.terrain, this.result, false);
+								if(destroy) {
+									duelist.initiate_fusion++;
+								}
 								return this.result;
 							}
 						}
@@ -125,6 +140,9 @@ public class Fusion {
 				if(mc1.canEquip(ec2)) {
 					mc1 = (MonsterCard) mc1.copy();
 					duel.increasePower(this.duelist, mc1, ec2.incrementBy);
+					if(destroy) {
+						this.duelist.equip_magic++;
+					}
 				}
 				if(destroy)
 					this.discard(ec2);
@@ -143,6 +161,9 @@ public class Fusion {
 				if(mc2.canEquip(ec1)) {
 					mc2 = (MonsterCard) mc2.copy();
 					duel.increasePower(this.duelist, mc2, ec1.incrementBy);
+					if(destroy) {
+						this.duelist.equip_magic++;
+					}
 				}
 				if(destroy)
 					this.discard(ec1);

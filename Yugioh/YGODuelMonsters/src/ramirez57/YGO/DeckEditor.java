@@ -74,9 +74,17 @@ public class DeckEditor {
 			c1 = Card.fromId(o1);
 			c2 = Card.fromId(o2);
 			if(SpellCard.class.isInstance(c1) || EquipCard.class.isInstance(c1)) {
-				return 1;
+				if(SpellCard.class.isInstance(c2) || EquipCard.class.isInstance(c2)) {
+					return Integer.compare(c1.id, c2.id);
+				} else {
+					return 1;
+				}
 			} else if(SpellCard.class.isInstance(c2) || EquipCard.class.isInstance(c2)) {
-				return -1;
+				if(SpellCard.class.isInstance(c1) || EquipCard.class.isInstance(c1)) {
+					return Integer.compare(c1.id, c2.id);
+				} else {
+					return -1;
+				}
 			} else {
 				mc1 = MonsterCard.class.cast(c1);
 				mc2 = MonsterCard.class.cast(c2);

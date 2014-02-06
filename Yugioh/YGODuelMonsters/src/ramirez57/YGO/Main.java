@@ -10,8 +10,10 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player; 
+import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryType;
@@ -75,7 +77,19 @@ public class Main extends JavaPlugin implements Listener {
 	}
 
 	public void onDisable() {
-
+		//Safe reload
+		//Close all deck editors to prevent cheating
+		while(!PluginVars.editing.isEmpty()) {
+			PluginVars.editing.values().iterator().next().close();
+		}
+		//Close all Commu Mode windows to prevent card loss
+		while(!PluginVars.commu_mode.isEmpty()) {
+			PluginVars.commu_mode.values().iterator().next().close(false);
+		}
+		//Close dueling windows
+		for(String s : this.dueling) {
+			Bukkit.getPlayer(s).closeInventory();
+		}
 	}
 
 	public static void giveLore(ItemStack i, int amnt) {
@@ -128,6 +142,31 @@ public class Main extends JavaPlugin implements Listener {
 	}
 	
 	@EventHandler
+	public void dragon_duel(EntityDamageByEntityEvent e) {
+		if(e.getDamager().getType() == EntityType.ENDER_DRAGON && e.getEntityType() == EntityType.PLAYER) {
+			Player p = Player.class.cast(e.getEntity());
+			if(PluginVars.isDueling(p)) {
+				e.setCancelled(true);
+				return;
+			}
+			new NPCGenerator().generate(e.getDamager(), e.getDamager().getUniqueId());
+			try {
+				if(DeckGenerator.checkDeckInt(PluginVars.getDeckFor(p))) {
+					e.setCancelled(true);
+					Inventory i = Bukkit.createInventory(null, 54, "Duel Monsters");
+					Duel duel = PluginVars.createDuel(p, i, null, null, e.getDamager().getUniqueId());
+					p.openInventory(i);
+					duel.startDuel();
+				} else {
+					p.sendMessage("Deck is illegal! Please re-arrange it before dueling.");
+				}
+			} catch (NoDeckException e1) {
+				p.sendMessage("You don't have a deck!");
+			}
+		}
+	}
+	
+	@EventHandler
 	public void duelreq(PlayerInteractEntityEvent e) {
 		Player p = e.getPlayer();
 		if(PluginVars.isAdminEditor(p)) {
@@ -174,8 +213,16 @@ public class Main extends JavaPlugin implements Listener {
 		if(PluginVars.duel_mode.contains(p)) {
 			if(e.getRightClicked().getType() != EntityType.PLAYER) {
 				UUID uuid = e.getRightClicked().getUniqueId();
-				if(e.getRightClicked().getType() == EntityType.VILLAGER)
-					new NPCGenerator().generate(uuid);
+				switch(e.getRightClicked().getType()) {
+				case VILLAGER:
+				case ENDERMAN:
+				case ENDER_DRAGON:
+				case PIG_ZOMBIE:
+					new NPCGenerator().generate(e.getRightClicked(), uuid);
+				default:
+					break;
+					
+				}
 				if(PluginVars.isDuelist(uuid)) {
 					if(e.getRightClicked().getType() == EntityType.VILLAGER || PluginVars.hasDeck(uuid)) {
 						e.setCancelled(true);
@@ -300,6 +347,12 @@ public class Main extends JavaPlugin implements Listener {
 				PluginVars.commu_mode.get(p).input(e.getRawSlot(), e.getClick());
 				e.setCancelled(true);
 			}
+		} else if(PluginVars.spectating.get(p) != null) {
+			if(e.getRawSlot() == InventoryView.OUTSIDE) {
+				PluginVars.spectating.get(p).close();
+			} else {
+				e.setCancelled(true);
+			}
 		}
 	}
 
@@ -311,6 +364,9 @@ public class Main extends JavaPlugin implements Listener {
 		}
 		if(PluginVars.commu_mode.get(p) != null) {
 			PluginVars.commu_mode.get(p).close(false);
+		}
+		if(PluginVars.spectating.get(p) != null) {
+			PluginVars.spectating.get(p).close();
 		}
 		if(PluginVars.isDueling(p)) {
 			try {
@@ -479,6 +535,30 @@ public class Main extends JavaPlugin implements Listener {
 						}
 					}
 				}
+			} else if(args[0].equalsIgnoreCase("spec")) {
+				if(Player.class.isInstance(sender)) {
+					Player p = Player.class.cast(sender);
+					if (args.length != 2) {
+						p.sendMessage("/ygo spec [player]");
+					} else {
+						Player p2 = Bukkit.getServer().getPlayer(args[1]);
+						if(p2 == null) {
+							p.sendMessage("That player is not online.");
+						} else if(p == p2) {
+							p.sendMessage("You cannot spectate yourself.");
+						} else {
+							if(p.getLocation().distance(p2.getLocation()) <= 17.0d) {
+								try {
+									PluginVars.spectating.put(p, Spectator.open(p, p2));
+								} catch (NotDuelingException e) {
+									p.sendMessage(p2.getDisplayName() + ChatColor.WHITE + " is not dueling.");
+								}
+							} else {
+								p.sendMessage(p2.getDisplayName() + ChatColor.WHITE + " is not close enough to you.");
+							}
+						}
+					}
+				}
 			}
 		} else if(cmd.getName().equalsIgnoreCase("ygoadmin")) {
 			if(args.length <= 0) {
@@ -545,7 +625,7 @@ public class Main extends JavaPlugin implements Listener {
 							p.sendMessage("Invalid entity name: " + args[1]);
 						} else {
 							Entity ent = p.getWorld().spawnEntity(p.getLocation(), type);
-							new NPCGenerator().generate(ent.getUniqueId());
+							new NPCGenerator().generate(ent, ent.getUniqueId());
 						}
 					} else {
 						sender.sendMessage("/ygoadmin generate [entity_type]");
@@ -561,22 +641,32 @@ public class Main extends JavaPlugin implements Listener {
 	public int clean() {
 		int cleaned = 0;
 		Set<UUID> _saves = PluginVars.npc_decks.keySet();
+		List<UUID> _nonsaves = PluginVars.npc_nonduelists;
 		List<UUID> saves = new ArrayList<UUID>();
 		for(UUID uuid : _saves) {
 			saves.add(uuid);
 		}
+		for(UUID uuid : _nonsaves) {
+			saves.add(uuid);
+		}
+		
 		List<World> worlds = Bukkit.getWorlds();
 		List<Entity> entities = null;
 		for(World world : worlds) {
 			entities = world.getEntities();
 			for(Entity e : entities) {
+				if(e.getType() == EntityType.ENDER_DRAGON)
+					continue;
 				saves.remove(e.getUniqueId());
 			}
 		}
 		Iterator<UUID> iterator = saves.iterator();
 		while(iterator.hasNext()) {
 			UUID uuid = iterator.next();
-			PluginVars.npc_decks.remove(uuid);
+			if(PluginVars.npc_decks.containsKey(uuid))
+				PluginVars.npc_decks.remove(uuid);
+			else if(PluginVars.npc_nonduelists.contains(uuid))
+				PluginVars.npc_nonduelists.remove(uuid);
 			cleaned++;
 		}
 		PluginVars.save();
@@ -603,6 +693,7 @@ public class Main extends JavaPlugin implements Listener {
 		sender.sendMessage("/ygo help - Bring up this menu");
 		sender.sendMessage("/ygo deck - Deck editor");
 		sender.sendMessage("/ygo duel - Toggle duelist mode");
+		sender.sendMessage("/ygo spec [player] - Spectate a player's duel");
 		sender.sendMessage("/ygo accept - Accept duel request");
 		sender.sendMessage("/ygo decline - Decline duel request");
 		sender.sendMessage("/ygo ignore - Ignore all duel requests");
@@ -610,7 +701,7 @@ public class Main extends JavaPlugin implements Listener {
 		sender.sendMessage("/ygo convert - Convert PAPER to Duel Monsters card");
 		sender.sendMessage("/ygo check [password] - Check card password cost");
 		if(PluginVars.allow_commu_fusion)
-			sender.sendMessage("/ygo commu - Communication fusion with player");
+			sender.sendMessage("/ygo commu [player] - Communication fusion with player");
 	}
 
 }

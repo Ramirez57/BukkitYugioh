@@ -22,6 +22,7 @@ public class SpellCard extends Card {
 			PluginVars.engine.eval(new FileReader(this.effectFile));
 			try {
 				PluginVars.engineinv.invokeFunction("effect", duel, duelist);
+				duelist.pure_magic++;
 			} catch (NoSuchMethodException e) {
 				e.printStackTrace();
 			}

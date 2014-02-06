@@ -272,8 +272,8 @@ public class CommuFusion {
 				"\n STAR: " + mode_star.get(0).name +
 				"\n TYPE: " + mode_type.get(0).name);*/
 		
-		for(i = 1; i < Card.cards.length+1; i++) {
-			c = Card.fromId(i).copy();
+		for(i = 0; i < Card.cards.length; i++) {
+			c = Card.cards[i];
 			if(get_ritual) {
 				if(RitualCard.class.isInstance(c)) {
 					results.add(c.id);

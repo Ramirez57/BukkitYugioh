@@ -4,6 +4,7 @@ import java.util.Iterator;
 import java.util.Stack;
 import java.util.UUID;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -92,62 +93,141 @@ public class Duel {
 	}
 
 	public void endDuel(Duelist winner, WinReason reason) {
+		MonsterCard mc;
+		Card c;
+		Iterator<Card> iterator;
 		PluginVars.duel_list.remove(this);
 		if (winner != null) {
 			if (winner.player != null) {
 				winner.player.closeInventory();
-				winner.player.sendMessage("YOU WIN by " + reason.toString());
+				PluginVars.closeSpectators(winner.player, true, reason);
+				winner.player.sendMessage("YOU WIN" + " by " + ChatColor.GOLD + reason.name + ChatColor.WHITE + " (" + winner.turns + " turns)");
 				if (winner.opponent.player == null) {
-					if (reason == WinReason.TOTAL_ANNIHILATION
-							|| reason == WinReason.EXODIA) {
-						for (Card card : this.graveyard) {
-							if ((EquipCard.class.isInstance(card) || FieldCard.class.isInstance(card)) && card.obtainable)
-								winner.rewards.push(card.freshCopy());
-						}
-						winner.rewards.push(Card.fromId(690).copy());
-						Card reward = winner.rewards
-								.get(PluginVars.random.nextInt(winner.rewards
-										.size())).freshCopy();
-						Main.giveReward(winner.player, reward.id);
-						int sc = 1;
-						if(winner.deck.cards.size() > 28)
-							sc++;
-						if(winner.lp > 4000)
-							sc++;
-						if(winner.lp > 6000)
-							sc++;
-						if(winner.lp >= 8000)
-							sc++;
-						boolean pow = true;
-						if(winner.deck.cards.size() <= 15) {
+					boolean pow = true;
+					int sc = 1;
+					if (reason == WinReason.ATTRITION) {
+						pow = false;
+						sc = 5;
+						winner.rewards = this.graveyard;
+					} else {
+						if (winner.deck.cards.size() < 13) {
 							pow = false;
 						}
-						PluginVars.giveStarchips(winner.player, sc);
-						winner.player.sendMessage("RANK: " + Rank.get(sc, pow));
-						winner.player.sendMessage("Obtained: " + reward.name);
-					} else {
-						winner.rewards = this.graveyard;
-						Iterator<Card> iterator = winner.rewards.iterator();
-						while(iterator.hasNext()) {
-							if (!iterator.next().obtainable) {
-								iterator.remove();
+						if (pow) {
+							sc = 5;
+							if (winner.deck.cards.size() <= 27)
+								sc--;
+							if (winner.trigger_trap > 0)
+								sc--;
+							if (winner.pure_magic > 0)
+								sc--;
+							if (winner.equip_magic >= 3)
+								sc--;
+							if (winner.card_destruction > 0 || winner.lp < 8000)
+								sc--;
+							if (winner.deck.cards.size() <= 24)
+								sc--;
+						} else {
+							sc = -1;
+							if (winner.lp < 1000)
+								sc++;
+							if (winner.trigger_trap > 0)
+								sc++;
+							if (winner.pure_magic > 0)
+								sc++;
+							if (winner.equip_magic > 0)
+								sc++;
+							if (winner.initiate_fusion >= 10)
+								sc++;
+							if (winner.pure_magic >= 10)
+								sc++;
+							if (winner.equip_magic >= 10)
+								sc++;
+							if(winner.trigger_trap >= 7)
+								sc++;
+						}
+						if (sc <= 0)
+							sc = 1;
+						else if (sc >= 6)
+							sc = 5;
+						if (sc >= 4) {
+							if(pow) {
+								iterator = winner.rewards.iterator();
+								while(iterator.hasNext()) {
+									c = iterator.next();
+									if(TrapCard.class.isInstance(c)) {
+										iterator.remove();
+									}
+								}
+							} else {
+								winner.rewards = this.graveyard;
+							}
+						} else {
+							iterator = winner.rewards.iterator();
+							while (iterator.hasNext()) {
+								c = iterator.next();
+								if (MonsterCard.class.isInstance(c)) {
+									mc = MonsterCard.class.cast(c);
+									if (mc.level > 4)
+										iterator.remove();
+								}
+							}
+							if(pow) {
+								iterator = this.graveyard.iterator();
+								while (iterator.hasNext()) {
+									c = iterator.next();
+									if (FieldCard.class.isInstance(c)) {
+										winner.rewards.add(c);
+									}
+								}
+							} else {
+								iterator = winner.rewards.iterator();
+								while(iterator.hasNext()) {
+									c = iterator.next();
+									if(TrapCard.class.isInstance(c)) {
+										iterator.remove();
+									}
+								}
+								iterator = this.graveyard.iterator();
+								while (iterator.hasNext()) {
+									c = iterator.next();
+									if (EquipCard.class.isInstance(c)) {
+										winner.rewards.add(c);
+									}
+								}
 							}
 						}
-						winner.rewards.push(Card.fromId(690).copy());
-						Card reward = winner.rewards
-								.get(PluginVars.random.nextInt(winner.rewards
-										.size())).freshCopy();
-						Main.giveReward(winner.player, reward.id);
-						PluginVars.giveStarchips(winner.player, 5);
-						winner.player.sendMessage("RANK: " + Rank.get(5, false));
-						winner.player.sendMessage("Obtained: " + reward.name);
 					}
+					iterator = winner.rewards.iterator();
+					while (iterator.hasNext()) {
+						if (!iterator.next().obtainable) {
+							iterator.remove();
+						}
+					}
+					winner.rewards.push(Card.fromId(690).copy());
+					Card reward = winner.rewards.get(
+							PluginVars.random.nextInt(winner.rewards.size()))
+							.freshCopy();
+					PluginVars.giveStarchips(winner.player, sc);
+					Main.giveReward(winner.player, reward.id);
+					winner.player.sendMessage(
+							"Cards Used: " + (40 - winner.deck.cards.size()) + "\n" +
+							"Card Destruction: " + winner.opponent.card_destruction + "\n" +
+							"Combo Plays: " + winner.combo_plays + "\n" +
+							"Initiate Fusion: " + winner.initiate_fusion + "\n" +
+							"Equip Magic: " + winner.equip_magic + "\n" +
+							"Change Field: " + winner.change_field + "\n" + 
+							"Pure Magic: " + winner.pure_magic + "\n" + 
+							"Trigger Trap: " + winner.trigger_trap + "\n" +
+							"RANK: " + Rank.getColored(sc, pow, ChatColor.WHITE) + "\n" +
+							"Obtained: " + reward.name);
 				}
 			}
 			if (winner.opponent.player != null) {
 				winner.opponent.player.closeInventory();
+				PluginVars.closeSpectators(winner.opponent.player, false, reason);
 				winner.opponent.player.sendMessage("YOU LOSE by "
-						+ reason.toString());
+						+ ChatColor.RED + reason.toString());
 			}
 		}
 		if (this.duelists[0].player != null) {
@@ -192,12 +272,15 @@ public class Duel {
 						duelist.field.monsterzones[slot - 27].remove();
 					}
 					Card result = null;
+					duelist.combo_plays++;
 					while (duelist.fusion_mat.size() > 1) {
-						result = Fusion.createFusion(this, duelist, duelist.fusion_mat.get(0), duelist.fusion_mat.get(1)).initiate(true);
+						result = Fusion.createFusion(this, duelist,
+								duelist.fusion_mat.get(0),
+								duelist.fusion_mat.get(1)).initiate(true);
 						duelist.fusion_mat.remove(0);
 						duelist.fusion_mat.remove(0);
 						duelist.fusion_mat.insertElementAt(result, 0);
-						
+
 					}
 					duelist.selectedCard = result;
 					duelist.fusion_mat.clear();
@@ -280,25 +363,33 @@ public class Duel {
 									0);
 							duelist.fusion_mat.push(duelist.selectedCard);
 							duelist.hand.removeCard(duelist.selectedCard);
-							duelist.field.monsterzones[slot-27].remove();
-							duelist.selectedCard = Fusion.createFusion(this, duelist, duelist.fusion_mat.get(0), duelist.fusion_mat.get(1)).initiate(true);
+							duelist.field.monsterzones[slot - 27].remove();
+							duelist.combo_plays++;
+							duelist.selectedCard = Fusion.createFusion(this,
+									duelist, duelist.fusion_mat.get(0),
+									duelist.fusion_mat.get(1)).initiate(true);
 							duelist.fusion_mat.clear();
 							duelist.selectedZone = slot - 27;
 							duelist.fused = true;
-							if(MonsterCard.class.isInstance(duelist.selectedCard)) {
-								mc = MonsterCard.class.cast(duelist.selectedCard);
+							if (MonsterCard.class
+									.isInstance(duelist.selectedCard)) {
+								mc = MonsterCard.class
+										.cast(duelist.selectedCard);
 								mc.faceup = true;
 								mc.position = MonsterPosition.ATTACK;
 								duelist.faceup = true;
 								mc.star = mc.stars[0];
 								duelist.selectedStar = 0;
-								
-							} else if(SpellCard.class.isInstance(duelist.selectedCard)) {
-								SpellCard sc = SpellCard.class.cast(duelist.selectedCard);
+
+							} else if (SpellCard.class
+									.isInstance(duelist.selectedCard)) {
+								SpellCard sc = SpellCard.class
+										.cast(duelist.selectedCard);
 								sc.activate(this, duelist);
 								this.graveyard.push(sc);
 								duelist.phase = 3;
-							} else if(EquipCard.class.isInstance(duelist.selectedCard)) {
+							} else if (EquipCard.class
+									.isInstance(duelist.selectedCard)) {
 								this.graveyard.push(duelist.selectedCard);
 								duelist.phase = 3;
 							}
@@ -325,8 +416,8 @@ public class Duel {
 				} else if (slot == 44) {
 					if (!duelist.fused)
 						duelist.phase = 1;
-				} else if(action == ClickType.RIGHT) {
-					if(!duelist.fused)
+				} else if (action == ClickType.RIGHT) {
+					if (!duelist.fused)
 						duelist.phase = 1;
 				}
 			}
@@ -367,7 +458,7 @@ public class Duel {
 				}
 			}
 		} else if (duelist.phase == 4) {
-			if(action == ClickType.RIGHT) {
+			if (action == ClickType.RIGHT) {
 				duelist.phase = 1;
 			} else if (SpellCard.class.isInstance(duelist.selectedCard)) {
 				SpellCard sc = SpellCard.class.cast(duelist.selectedCard);
@@ -414,7 +505,7 @@ public class Duel {
 				duelist.phase = 3;
 			}
 		} else if (duelist.phase == 6) {
-			if(action == ClickType.RIGHT) {
+			if (action == ClickType.RIGHT) {
 				duelist.phase = 1;
 			} else if (!EquipCard.class.isInstance(duelist.selectedCard)) {
 				duelist.phase = 1;
@@ -425,9 +516,13 @@ public class Duel {
 						duelist.fusion_mat
 								.push(duelist.field.monsterzones[slot - 27].card);
 						duelist.fusion_mat.push(duelist.selectedCard);
-						duelist.selectedCard = Fusion.createFusion(this, duelist, duelist.fusion_mat.get(0), duelist.fusion_mat.get(1)).initiate(true);
+						duelist.combo_plays++;
+						duelist.selectedCard = Fusion.createFusion(this,
+								duelist, duelist.fusion_mat.get(0),
+								duelist.fusion_mat.get(1)).initiate(true);
 						duelist.selectedCard.faceup = true;
-						duelist.field.monsterzones[slot-27].put(duelist.selectedCard);
+						duelist.field.monsterzones[slot - 27]
+								.put(duelist.selectedCard);
 						duelist.fusion_mat.clear();
 						duelist.phase = 3;
 					}
@@ -444,7 +539,7 @@ public class Duel {
 				}
 			}
 		} else if (duelist.phase == 7) {
-			if(action == ClickType.RIGHT) {
+			if (action == ClickType.RIGHT) {
 				duelist.phase = 3;
 			} else if (EquipCard.class.isInstance(duelist.selectedCard)) {
 				EquipCard ec = EquipCard.class.cast(duelist.selectedCard);
@@ -454,9 +549,13 @@ public class Duel {
 								duelist.field.monsterzones[slot - 27].card, 0);
 						duelist.fusion_mat.push(ec);
 						duelist.field.removeCard(duelist.selectedCard);
-						duelist.selectedCard = Fusion.createFusion(this, duelist, duelist.fusion_mat.get(0), duelist.fusion_mat.get(1)).initiate(true);
+						duelist.combo_plays++;
+						duelist.selectedCard = Fusion.createFusion(this,
+								duelist, duelist.fusion_mat.get(0),
+								duelist.fusion_mat.get(1)).initiate(true);
 						duelist.selectedCard.faceup = true;
-						duelist.field.monsterzones[slot-27].put(duelist.selectedCard);
+						duelist.field.monsterzones[slot - 27]
+								.put(duelist.selectedCard);
 						duelist.fusion_mat.clear();
 						duelist.phase = 3;
 					}
@@ -480,11 +579,11 @@ public class Duel {
 		}
 		this.checkLPs();
 	}
-	
+
 	public void decreaseLP(Duelist duelist, int amnt) {
 		if (this.duelists[0] == duelist || this.duelists[1] == duelist) {
-			TrapEventLPDecrease teld = new TrapEventLPDecrease(this,
-					duelist, duelist.opponent, duelist, amnt);
+			TrapEventLPDecrease teld = new TrapEventLPDecrease(this, duelist,
+					duelist.opponent, duelist, amnt);
 			if (!this.triggerTraps(duelist, duelist.opponent, teld)) {
 				duelist.lp -= amnt;
 			}
@@ -514,9 +613,11 @@ public class Duel {
 				continue;
 			if (TrapCard.class.isInstance(mz.card)) {
 				TrapCard tc = TrapCard.class.cast(mz.card);
-				if(tc.trigger(this, duelist, triggerer, e)) {
+				if (tc.trigger(this, duelist, triggerer, e)) {
 					this.sfx(Sound.FIRE_IGNITE);
 					duelist.field.destroyCard(tc, this, null);
+					duelist.trigger_trap++;
+					duelist.opponent.rewards.add(tc);
 					return true;
 				}
 			}
@@ -551,7 +652,7 @@ public class Duel {
 			int bonus = attacking.bonus;
 			int bonus2 = defending.bonus;
 			attacking.faceup = true;
-			int aap,adp,dap,ddp;
+			int aap, adp, dap, ddp;
 			aap = attacking.getAtk();
 			adp = attacking.getDef();
 			dap = defending.getAtk();
@@ -559,13 +660,13 @@ public class Duel {
 
 			defending.faceup = true;
 			if (attacking.star.isSuperiorTo(defending.star)) {
-				//System.out.println("IS SUPERIOR");
-				aap+=500;
-				adp+=500;
+				// System.out.println("IS SUPERIOR");
+				aap += 500;
+				adp += 500;
 				bonus += 500;
 			} else if (defending.star.isSuperiorTo(attacking.star)) {
-				dap+=500;
-				ddp+=500;
+				dap += 500;
+				ddp += 500;
 				bonus2 += 500;
 			}
 			this.sfx(Sound.CREEPER_DEATH);
@@ -575,23 +676,27 @@ public class Duel {
 					try {
 						defender.field.getZoneWithCard(defending).toGraveyard(
 								this, attacker);
+						defender.card_destruction++;
 					} catch (NoZoneOpenException e) {
 					}
 				} else if (aap == dap) {
 					try {
 						attacker.field.getZoneWithCard(attacking).toGraveyard(
 								this, defender);
+						attacker.card_destruction++;
 					} catch (NoZoneOpenException e) {
 					}
 					try {
 						defender.field.getZoneWithCard(defending).toGraveyard(
 								this, attacker);
+						defender.card_destruction++;
 					} catch (NoZoneOpenException e) {
 					}
 				} else if (aap < dap) {
 					try {
 						attacker.field.getZoneWithCard(attacking).toGraveyard(
 								this, defender);
+						attacker.card_destruction++;
 					} catch (NoZoneOpenException e) {
 					}
 					attacker.lp -= (dap - aap);
@@ -601,6 +706,7 @@ public class Duel {
 					try {
 						defender.field.getZoneWithCard(defending).toGraveyard(
 								this, attacker);
+						defender.card_destruction++;
 					} catch (NoZoneOpenException e) {
 					}
 				} else if (aap < ddp) {
@@ -669,7 +775,8 @@ public class Duel {
 	public void swapTurn() {
 		this.firstturn = false;
 		this.duelists[this.turn].phase = 0;
-		if(this.duelists[this.turn].swords > 0)
+		this.duelists[this.turn].turns++;
+		if (this.duelists[this.turn].swords > 0)
 			this.duelists[this.turn].swords--;
 		if (this.turn == 0)
 			this.turn = 1;
@@ -692,7 +799,9 @@ public class Duel {
 	}
 
 	public void increasePower(Duelist powering, MonsterCard mc, int amnt) {
-		if(!this.triggerTraps(powering.opponent, powering, new TrapEventPowerUp(this, powering.opponent, powering, powering, mc, amnt))) {
+		if (!this.triggerTraps(powering.opponent, powering,
+				new TrapEventPowerUp(this, powering.opponent, powering,
+						powering, mc, amnt))) {
 			mc.bonus += amnt;
 		}
 	}

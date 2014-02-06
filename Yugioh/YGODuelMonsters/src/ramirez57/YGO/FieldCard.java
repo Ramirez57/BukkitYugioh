@@ -19,6 +19,8 @@ public class FieldCard extends SpellCard {
 	}
 	
 	public void activate(Duel duel, Duelist duelist) {
+		duelist.change_field++;
+		duelist.pure_magic++;
 		duel.changeTerrain(this.terrain);
 	}
 }

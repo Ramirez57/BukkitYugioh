@@ -2,6 +2,7 @@ package ramirez57.YGO;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class DeckGenerator {
@@ -41,6 +42,90 @@ public class DeckGenerator {
 			}
 		}
 		return true;
+	}
+	
+	public static Comparator<Card> SORTER_ATK = new Comparator<Card>() {
+		@Override
+		public int compare(final Card c1, final Card c2) {
+			MonsterCard mc1,mc2;
+			if(SpellCard.class.isInstance(c1) || EquipCard.class.isInstance(c1)) {
+				return -1;
+			} else if(SpellCard.class.isInstance(c2) || EquipCard.class.isInstance(c2)) {
+				return 1;
+			} else {
+				mc1 = MonsterCard.class.cast(c1);
+				mc2 = MonsterCard.class.cast(c2);
+				return Integer.compare(mc1.atk, mc2.atk);
+			}
+		}
+	};
+	
+	public List<Card> generateSPOW() {
+		List<Card> result = new ArrayList<Card>();
+		int numMagics = 9;
+		int numEquips = 10;
+		int numMobs = 40 - numMagics - numEquips;
+		while(!checkDeck(result)) {
+			result.clear();
+			List<Card> mcards = new ArrayList<Card>();
+			List<Card> scards = new ArrayList<Card>();
+			List<Card> ecards = new ArrayList<Card>();
+			List<Card> secards = new ArrayList<Card>();
+			if(numMagics < 40) {
+				numMagics++;
+				numMobs--;
+			}
+			
+			
+			
+			for(Card card : Card.cards) {
+				if(MonsterCard.class.isInstance(card)) {
+					MonsterCard mc = MonsterCard.class.cast(card);
+					mcards.add(mc);
+				}
+			}
+			
+			Collections.sort(mcards, SORTER_ATK);
+			Collections.reverse(mcards);
+			
+			for(Card card : Card.cards) {
+				if(SpellCard.class.isInstance(card) || EquipCard.class.isInstance(card)) {
+					if(EquipCard.class.isInstance(card)) {
+						EquipCard ec = EquipCard.class.cast(card);
+						if(ec.equipsTo.contains(-1)) {
+							secards.add(ec);
+							secards.add(ec);
+							secards.add(ec);
+						} else {
+							for(Card toequip : mcards) {
+								MonsterCard mc = MonsterCard.class.cast(toequip);
+								if(mc.canEquip(ec)) {
+									ecards.add(card);
+									break;
+								}
+							}
+						}
+					} else if(RitualCard.class.isInstance(card)) {
+					} else if(!FieldCard.class.isInstance(card)) {
+						scards.add(card);
+					}
+				}
+			}
+			
+			for(int i = 0; i < numMobs; i++) {
+				result.add(mcards.get(i / 3).freshCopy());
+			}
+			for(int i = 0; i < numMagics; i++) {
+				result.add(scards.get(PluginVars.random.nextInt(scards.size())).freshCopy());
+			}
+			for(int i = 0; i < secards.size() && i < numEquips; i++) {
+				result.add(secards.get(i));
+			}
+			for(int i = 0; i < numEquips - secards.size(); i++) {
+				result.add(ecards.get(PluginVars.random.nextInt(ecards.size())).freshCopy());
+			}
+		}
+		return result;
 	}
 	
 	public List<Card> generatePOW(int pow) {
@@ -147,6 +232,11 @@ public class DeckGenerator {
 								break;
 							}
 						}
+					} else if(RitualCard.class.isInstance(card)) {
+						RitualCard rc = RitualCard.class.cast(card);
+						if(this.containsCards(mcards, rc.materials)) {
+							scards.add(card);
+						}
 					} else if(!FieldCard.class.isInstance(card)) {
 						scards.add(card);
 					}
@@ -160,6 +250,71 @@ public class DeckGenerator {
 			}
 			for(int i = 0; i < numMagics; i++) {
 				result.add(scards.get(PluginVars.random.nextInt(scards.size())).freshCopy());
+			}
+		}
+		return result;
+	}
+	
+	public List<Card> generateSuperThemed() {
+		List<Card> result = new ArrayList<Card>();
+		while(!checkDeck(result)) {
+			result.clear();
+			List<FieldCard> fields = new ArrayList<FieldCard>();
+			for(Card card : Card.cards) {
+				if(FieldCard.class.isInstance(card)) {
+					fields.add(FieldCard.class.cast(card.freshCopy()));
+				}
+			}
+			FieldCard fc = fields.get(PluginVars.random.nextInt(fields.size()));
+			List<MonsterType> favors = fc.terrain.favors;
+			List<Card> mcards = new ArrayList<Card>();
+			List<Card> scards = new ArrayList<Card>();
+			List<Card> ecards = new ArrayList<Card>();
+			int numEquips = 8;
+			int numMagics = PluginVars.random.nextInt(3) + 7;
+			
+			for(Card card : Card.cards) {
+				if(MonsterCard.class.isInstance(card)) {
+					if(favors.contains(MonsterCard.class.cast(card).type) && card.obtainable && MonsterCard.class.cast(card).level >= 4) {
+						mcards.add(card);
+					}
+				}
+			}
+			
+			for(Card card : Card.cards) {
+				 if(SpellCard.class.isInstance(card) || EquipCard.class.isInstance(card)) {
+					if(EquipCard.class.isInstance(card)) {
+						EquipCard ec = EquipCard.class.cast(card);
+						for(Card toequip : mcards) {
+							MonsterCard mc = MonsterCard.class.cast(toequip);
+							if(mc.canEquip(ec) && ec.obtainable) {
+								ecards.add(card);
+								break;
+							}
+						}
+					} else if(RitualCard.class.isInstance(card)) {
+						RitualCard rc = RitualCard.class.cast(card);
+						if(this.containsCards(mcards, rc.materials)) {
+							scards.add(card);
+						}
+					} else if(!FieldCard.class.isInstance(card) && card.obtainable) {
+						scards.add(card);
+					}
+				}
+			}
+			
+			int numMobs = 37 - numMagics - numEquips;
+			for(int i = 0; i < numMobs; i++) {
+				result.add(mcards.get(PluginVars.random.nextInt(mcards.size())).freshCopy());
+			}
+			for(int i = 0; i < numEquips; i++) {
+				result.add(ecards.get(PluginVars.random.nextInt(ecards.size())).freshCopy());
+			}
+			for(int i = 0; i < numMagics; i++) {
+				result.add(scards.get(PluginVars.random.nextInt(scards.size())).freshCopy());
+			}
+			for(int i = 0; i < 3; i++) {
+				result.add(fc.freshCopy());
 			}
 		}
 		return result;
@@ -199,6 +354,11 @@ public class DeckGenerator {
 								scards.add(card);
 								break;
 							}
+						}
+					} else if(RitualCard.class.isInstance(card)) {
+						RitualCard rc = RitualCard.class.cast(card);
+						if(this.containsCards(mcards, rc.materials)) {
+							scards.add(card);
 						}
 					} else if(!FieldCard.class.isInstance(card)) {
 						scards.add(card);

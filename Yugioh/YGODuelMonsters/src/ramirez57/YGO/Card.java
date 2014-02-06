@@ -22,7 +22,7 @@ public class Card implements Cloneable {
 	//public Duelist defeatedBy; Do not use
 	public Trait[] traits;
 	
-	public static Card cards[];
+	public static Card cards[]; //Use this to iterate over all cards. Do not use this to reference by ID!
 	public static HashMap<String, Card> BY_PASSWORD;
 	public static HashMap<Integer, Card> BY_ID;
 	public static Card ANY = new Card();
@@ -96,94 +96,115 @@ public class Card implements Cloneable {
 		FieldCard fc;
 		RitualCard rc;
 		TrapCard tc;
-		YamlConfiguration config;
 		Card.BY_PASSWORD = new HashMap<String, Card>();
 		Card.BY_ID = new HashMap<Integer, Card>();
-		config = YamlConfiguration.loadConfiguration(new File(PluginVars.dirCards, "cards.yml"));
-		Set<String> cardconfigs = config.getKeys(false);
-		Iterator<String> iterator = cardconfigs.iterator();
-		Card.cards = new Card[cardconfigs.size()];
-		c = 0;
-		while(iterator.hasNext()) {
-			String prefix = iterator.next();
-			//System.out.println(prefix);
-			String s = config.getString(prefix + ".kind");
-			if(s.equalsIgnoreCase("monster")) {
-				mc = new MonsterCard();
-				mc.id = config.getInt(prefix + ".id");
-				mc.name = config.getString(prefix + ".name");
-				mc.atk = config.getInt(prefix + ".atk");
-				mc.def = config.getInt(prefix + ".def");
-				mc.level = config.getInt(prefix + ".level");
-				mc.type = MonsterType.fromString(config.getString(prefix + ".type"));
-				mc.attribute = MonsterAttribute.fromString(config.getString(prefix + ".attribute"));
-				List<String> ls = config.getStringList(prefix + ".stars");
-				mc.stars[0] = GuardianStar.fromString(ls.get(0));
-				mc.stars[1] = GuardianStar.fromString(ls.get(1));
-				mc.desc = Card.splitEvery(16, config.getString(prefix + ".description"));
-				mc.password = prefix;
-				mc.obtainable = config.getBoolean(prefix + ".obtainable");
-				mc.cost = config.getInt(prefix + ".cost");
-				ls = config.getStringList(prefix + ".traits");
-				mc.traits = new Trait[ls.size()+1];
-				for(i = 0; i < ls.size(); i++) {
-					mc.traits[i] = Trait.fromString(ls.get(i));
-				}
-				mc.traits[ls.size()] = Trait.fromString(mc.attribute.toString());
-				Card.cards[c] = mc;
-			} else if(s.equalsIgnoreCase("spell")) {
-				sc = SpellCard.create(config.getString(prefix + ".name"), new File(PluginVars.dirCards, config.getString(prefix + ".effect")));
-				sc.id = config.getInt(prefix + ".id");
-				sc.desc = Card.splitEvery(16, config.getString(prefix + ".description"));
-				sc.password = prefix;
-				sc.obtainable = config.getBoolean(prefix + ".obtainable");
-				sc.cost = config.getInt(prefix + ".cost");
-				Card.cards[c] = sc;
-			} else if(s.equalsIgnoreCase("equip")) {
-				ec = EquipCard.create(config.getString(prefix + ".name"), config.getInt(prefix + ".power"), config.getIntegerList(prefix + ".equipsTo"));
-				ec.id = config.getInt(prefix + ".id");
-				ec.desc = Card.splitEvery(16, config.getString(prefix + ".description"));
-				ec.password = prefix;
-				ec.obtainable = config.getBoolean(prefix + ".obtainable");
-				ec.cost = config.getInt(prefix + ".cost");
-				Card.cards[c] = ec;
-			} else if(s.equalsIgnoreCase("field")) {
-				List<String> szfavors = config.getStringList(prefix + ".favors");
-				List<MonsterType> favors = new ArrayList<MonsterType>();
-				for(i=0;i < szfavors.size(); i++) {
-					favors.add(MonsterType.fromString(szfavors.get(i)));
-				}
-				szfavors = config.getStringList(prefix + ".unfavors");
-				List<MonsterType> unfavors = new ArrayList<MonsterType>();
-				for(i=0;i < szfavors.size(); i++) {
-					unfavors.add(MonsterType.fromString(szfavors.get(i)));
-				}
-				fc = FieldCard.create(config.getString(prefix + ".name"), favors, unfavors, Material.matchMaterial(config.getString(prefix + ".texture")));
-				fc.id = config.getInt(prefix + ".id");
-				fc.desc = Card.splitEvery(16, config.getString(prefix + ".description"));
-				fc.password = prefix;
-				fc.obtainable = config.getBoolean(prefix + ".obtainable");
-				fc.cost = config.getInt(prefix + ".cost");
-				Card.cards[c] = fc;
-			} else if(s.equalsIgnoreCase("ritual")) {
-				rc = RitualCard.create(config.getString(prefix + ".name"), config.getIntegerList(prefix + ".materials"), config.getInt(prefix + ".result"));
-				rc.id = config.getInt(prefix + ".id");
-				rc.desc = Card.splitEvery(16, config.getString(prefix + ".description"));
-				rc.password = prefix;
-				rc.obtainable = config.getBoolean(prefix + ".obtainable");
-				rc.cost = config.getInt(prefix + ".cost");
-				Card.cards[c] = rc;
-			} else if(s.equalsIgnoreCase("trap")) {
-				tc = TrapCard.create(config.getString(prefix + ".name"), TrapEvent.fromString(config.getString(prefix + ".trigger")), new File(PluginVars.dirCards, config.getString(prefix + ".effect")));
-				tc.id = config.getInt(prefix + ".id");
-				tc.desc = Card.splitEvery(16, config.getString(prefix + ".description"));
-				tc.password = prefix;
-				tc.obtainable = config.getBoolean(prefix + ".obtainable");
-				tc.cost = config.getInt(prefix + ".cost");
-				Card.cards[c] = tc;
-			}
-			c++;
+		File[] files = PluginVars.dirCards.listFiles();
+		List<YamlConfiguration> card_configs = new ArrayList<YamlConfiguration>();
+		int numCards = 0;
+		List<String> set_names = new ArrayList<String>();
+		for(File f : files) {
+			if(!f.getName().substring(0,4).equalsIgnoreCase("set_")) continue;
+			card_configs.add(YamlConfiguration.loadConfiguration(f));
+			set_names.add(f.getName());
 		}
+		for(YamlConfiguration config : card_configs) {
+			numCards = config.getKeys(false).size();
+		}
+		String foundsets = "Found sets: ";
+		for(c = 0; c < set_names.size(); c++) {
+			if(c+1 >= set_names.size())
+				foundsets += set_names.get(c) + ".";
+			else
+				foundsets += set_names.get(c) + ", ";
+		}
+		PluginVars.plugin.getLogger().info(foundsets);
+		for(YamlConfiguration config : card_configs) {
+			Set<String> cardconfigs = config.getKeys(false);
+			Iterator<String> iterator = cardconfigs.iterator();
+			Card.cards = new Card[numCards];
+			c = 0;
+			while(iterator.hasNext()) {
+				String prefix = iterator.next();
+				//System.out.println(prefix);
+				String s = config.getString(prefix + ".kind");
+				if(s.equalsIgnoreCase("monster")) {
+					mc = new MonsterCard();
+					mc.id = config.getInt(prefix + ".id");
+					mc.name = config.getString(prefix + ".name");
+					mc.atk = config.getInt(prefix + ".atk");
+					mc.def = config.getInt(prefix + ".def");
+					mc.level = config.getInt(prefix + ".level");
+					mc.type = MonsterType.fromString(config.getString(prefix + ".type"));
+					mc.attribute = MonsterAttribute.fromString(config.getString(prefix + ".attribute"));
+					List<String> ls = config.getStringList(prefix + ".stars");
+					mc.stars[0] = GuardianStar.fromString(ls.get(0));
+					mc.stars[1] = GuardianStar.fromString(ls.get(1));
+					mc.desc = Card.splitEvery(16, config.getString(prefix + ".description"));
+					mc.password = prefix;
+					mc.obtainable = config.getBoolean(prefix + ".obtainable");
+					mc.cost = config.getInt(prefix + ".cost");
+					ls = config.getStringList(prefix + ".traits");
+					mc.traits = new Trait[ls.size()+1];
+					for(i = 0; i < ls.size(); i++) {
+						mc.traits[i] = Trait.fromString(ls.get(i));
+					}
+					mc.traits[ls.size()] = Trait.fromString(mc.attribute.toString());
+					Card.cards[c] = mc;
+				} else if(s.equalsIgnoreCase("spell")) {
+					sc = SpellCard.create(config.getString(prefix + ".name"), new File(PluginVars.dirCards, config.getString(prefix + ".effect")));
+					sc.id = config.getInt(prefix + ".id");
+					sc.desc = Card.splitEvery(16, config.getString(prefix + ".description"));
+					sc.password = prefix;
+					sc.obtainable = config.getBoolean(prefix + ".obtainable");
+					sc.cost = config.getInt(prefix + ".cost");
+					Card.cards[c] = sc;
+				} else if(s.equalsIgnoreCase("equip")) {
+					ec = EquipCard.create(config.getString(prefix + ".name"), config.getInt(prefix + ".power"), config.getIntegerList(prefix + ".equipsTo"));
+					ec.id = config.getInt(prefix + ".id");
+					ec.desc = Card.splitEvery(16, config.getString(prefix + ".description"));
+					ec.password = prefix;
+					ec.obtainable = config.getBoolean(prefix + ".obtainable");
+					ec.cost = config.getInt(prefix + ".cost");
+					Card.cards[c] = ec;
+				} else if(s.equalsIgnoreCase("field")) {
+					List<String> szfavors = config.getStringList(prefix + ".favors");
+					List<MonsterType> favors = new ArrayList<MonsterType>();
+					for(i=0;i < szfavors.size(); i++) {
+						favors.add(MonsterType.fromString(szfavors.get(i)));
+					}
+					szfavors = config.getStringList(prefix + ".unfavors");
+					List<MonsterType> unfavors = new ArrayList<MonsterType>();
+					for(i=0;i < szfavors.size(); i++) {
+						unfavors.add(MonsterType.fromString(szfavors.get(i)));
+					}
+					fc = FieldCard.create(config.getString(prefix + ".name"), favors, unfavors, Material.matchMaterial(config.getString(prefix + ".texture")));
+					fc.id = config.getInt(prefix + ".id");
+					fc.desc = Card.splitEvery(16, config.getString(prefix + ".description"));
+					fc.password = prefix;
+					fc.obtainable = config.getBoolean(prefix + ".obtainable");
+					fc.cost = config.getInt(prefix + ".cost");
+					Card.cards[c] = fc;
+				} else if(s.equalsIgnoreCase("ritual")) {
+					rc = RitualCard.create(config.getString(prefix + ".name"), config.getIntegerList(prefix + ".materials"), config.getInt(prefix + ".result"));
+					rc.id = config.getInt(prefix + ".id");
+					rc.desc = Card.splitEvery(16, config.getString(prefix + ".description"));
+					rc.password = prefix;
+					rc.obtainable = config.getBoolean(prefix + ".obtainable");
+					rc.cost = config.getInt(prefix + ".cost");
+					Card.cards[c] = rc;
+				} else if(s.equalsIgnoreCase("trap")) {
+					tc = TrapCard.create(config.getString(prefix + ".name"), TrapEvent.fromString(config.getString(prefix + ".trigger")), new File(PluginVars.dirCards, config.getString(prefix + ".effect")));
+					tc.id = config.getInt(prefix + ".id");
+					tc.desc = Card.splitEvery(16, config.getString(prefix + ".description"));
+					tc.password = prefix;
+					tc.obtainable = config.getBoolean(prefix + ".obtainable");
+					tc.cost = config.getInt(prefix + ".cost");
+					Card.cards[c] = tc;
+				}
+				c++;
+			}
+		}
+		
 		for(c=0; c < Card.cards.length; c++) {
 			Card.BY_PASSWORD.put(Card.cards[c].password, Card.cards[c]);
 			Card.BY_ID.put(Card.cards[c].id, Card.cards[c]);
@@ -192,6 +213,6 @@ public class Card implements Cloneable {
 				System.out.println("Missing Card? " + c);
 			}
 		}
-		PluginVars.logger.info("Loaded " + cardconfigs.size() + " cards.");
+		PluginVars.logger.info("Loaded " + numCards + " cards.");
 	}
 }
