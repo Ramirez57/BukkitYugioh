@@ -59,7 +59,7 @@ public class Duelist {
 			d.deck = Deck.fromPlayer(d);
 		d.field = new Field();
 		d.hand = new Hand();
-		if(p != null && interf != null)
+		if(interf != null)
 			d.duelInterface = interf;
 		return d;
 	}
@@ -74,6 +74,31 @@ public class Duelist {
 			}
 		}
 		throw new NotDuelingException();
+	}
+	
+	public boolean hasAdvantage() { //for AI purposes
+		MonsterZone mz1,mz2;
+		MonsterCard mymc,oppmc;
+		int pow;
+		mz1 = this.field.pickMonsterZone();
+		if(mz1 == null) {
+			return false;
+		}
+		mz2 = this.opponent.field.pickMonsterZone();
+		if(mz2 == null) {
+			return true;
+		}
+		mymc = MonsterCard.class.cast(mz1.card);
+		oppmc = MonsterCard.class.cast(mz2.card);
+		if(oppmc.position == MonsterPosition.ATTACK) {
+			pow = oppmc.getAtk();
+		} else {
+			pow = oppmc.getDef();
+		}
+		if(mymc.getAtk() > pow) {
+			return true;
+		}
+		return false;
 	}
 	
 	public boolean drawUntil(int amnt) {
@@ -148,28 +173,47 @@ public class Duelist {
 	
 	public static void createCardInfo(ItemStack item, Card c) {
 		int i;
+		ChatColor color;
+		ChatColor color2;
 		if(MonsterCard.class.isInstance(c)) {
 			MonsterCard mc = MonsterCard.class.cast(c);
+			color = ChatColor.GOLD;
+			color2 = ChatColor.YELLOW;
+			if(mc.attacked) {
+				color = ChatColor.GRAY;
+				color2 = ChatColor.GOLD;
+			}
+			if(mc.usedEffect) {
+				color2 = ChatColor.DARK_GRAY;
+			}
 			Main.setItemName(item, mc.name);
-			Main.giveLore(item, 5+mc.desc.length);
-			Main.setItemData(item, 0, ChatColor.GOLD + "[Monster] " + mc.type.toString() + "/" + mc.attribute.toString());
+			if(mc.hasEffect())
+				Main.giveLore(item, 5+mc.desc.length+mc.effectDesc.length);
+			else
+				Main.giveLore(item, 5+mc.desc.length);
+			Main.setItemData(item, 0, color + "[Monster] " + mc.type.toString() + "/" + mc.attribute.toString());
 			String s = "[";
 			for(int l = 0; l < mc.level; l++) {
 				s += '*';
 			}
 			s+="] ";
 			s+=(mc.getAtk()) + "/" + (mc.getDef());
-			Main.setItemData(item, 1, ChatColor.GOLD + s);
+			Main.setItemData(item, 1, color + s);
 			if(c.faceup) {
 				s = "Face-up ";
 			} else {
 				s = "Face-down ";
 			}
-			Main.setItemData(item, 2, ChatColor.GOLD + (s+mc.position.toString()));
-			Main.setItemData(item, 3, ChatColor.GOLD + mc.star.toString());
-			Main.setItemData(item, 4, ChatColor.GOLD + "+--------------+");
+			Main.setItemData(item, 2, color + (s+mc.position.toString()));
+			Main.setItemData(item, 3, color + mc.star.toString());
+			Main.setItemData(item, 4, color + "+--------------+");
 			for(i = 0; i < mc.desc.length; i++) {
-				Main.setItemData(item, 5+i, ChatColor.GOLD + mc.desc[i]);
+				Main.setItemData(item, 5+i, color + mc.desc[i]);
+			}
+			if(mc.hasEffect()) { 
+				for(i = 0; i < mc.effectDesc.length; i++) {
+					Main.setItemData(item, 5+mc.desc.length+i, color2 + mc.effectDesc[i]);
+				}
 			}
 		} else if(TrapCard.class.isInstance(c)) {
 			TrapCard tc = TrapCard.class.cast(c);
@@ -215,7 +259,11 @@ public class Duelist {
 		if(MonsterCard.class.isInstance(c)) {
 			MonsterCard mc = MonsterCard.class.cast(c);
 			Main.setItemName(item, mc.name);
-			Main.giveLore(item, 5+mc.desc.length);
+			if(mc.hasEffect()) {
+				Main.giveLore(item, 5+mc.desc.length+mc.effectDesc.length);
+			} else {
+				Main.giveLore(item, 5+mc.desc.length);
+			}
 			Main.setItemData(item, 0, "#" + c.id);
 			Main.setItemData(item, 1, ChatColor.GOLD + "[Monster] " + mc.type.toString() + "/" + mc.attribute.toString());
 			String s = "[";
@@ -229,6 +277,11 @@ public class Duelist {
 			Main.setItemData(item, 4, ChatColor.GOLD + "+--------------+");
 			for(i = 0; i < mc.desc.length; i++) {
 				Main.setItemData(item, 5+i, ChatColor.GOLD + mc.desc[i]);
+			}
+			if(mc.hasEffect()) {
+				for(i = 0; i < mc.effectDesc.length; i++) {
+					Main.setItemData(item, 5+mc.desc.length+i, ChatColor.YELLOW + mc.effectDesc[i]);
+				}
 			}
 		} else if(TrapCard.class.isInstance(c)) {
 			TrapCard tc = TrapCard.class.cast(c);
@@ -266,7 +319,10 @@ public class Duelist {
 		if(MonsterCard.class.isInstance(c)) {
 			MonsterCard mc = MonsterCard.class.cast(c);
 			Main.setItemName(item, mc.name);
-			Main.giveLore(item, 4+mc.desc.length);
+			if(mc.hasEffect())
+				Main.giveLore(item, 4+mc.desc.length+mc.effectDesc.length);
+			else
+				Main.giveLore(item, 4+mc.desc.length);
 			Main.setItemData(item, 0, ChatColor.GOLD + "[Monster] " + mc.type.toString() + "/" + mc.attribute.toString());
 			String s = "[";
 			for(int l = 0; l < mc.level; l++) {
@@ -279,6 +335,11 @@ public class Duelist {
 			Main.setItemData(item, 3, ChatColor.GOLD + "+--------------+");
 			for(i = 0; i < mc.desc.length; i++) {
 				Main.setItemData(item, 4+i, ChatColor.GOLD + mc.desc[i]);
+			}
+			if(mc.hasEffect()) {
+				for(i = 0; i < mc.effectDesc.length; i++) {
+					Main.setItemData(item, 4+mc.desc.length+i, ChatColor.YELLOW + mc.effectDesc[i]);
+				}
 			}
 		} else if(TrapCard.class.isInstance(c)) {
 			TrapCard tc = TrapCard.class.cast(c);
@@ -308,7 +369,7 @@ public class Duelist {
 	}
 	
 	public void updateInterface(Terrain terrain, Stack<Card> graveyard) {
-		if(this.player == null)
+		if(this.duelInterface == null)
 			return; //NULL player = AI is dueling!
 		this.duelInterface.clear();
 		int c;
@@ -330,7 +391,11 @@ public class Duelist {
 		}
 		for(c=0; c < this.opponent.hand.size(); c++) {
 			item = new ItemStack(Material.PAPER);
-			Main.setItemName(item, "?");
+			if(this.opponent.hand.revealed) {
+				Duelist.createHandCardInfo(item, this.opponent.hand.cards.get(c));
+			} else {
+				Main.setItemName(item, "?");
+			}
 			i.setItem(c, item);
 		}
 		for(c=0; c < this.hand.size(); c++) {
@@ -490,6 +555,17 @@ public class Duelist {
 			Main.giveLore(item, 1);
 			Main.setItemData(item, 0, "Select card to attack.");
 			i.setItem(23,item);
+			
+			if(PluginVars.monster_effects) {
+				if(MonsterCard.class.isInstance(this.selectedCard)) { 
+					MonsterCard mc = MonsterCard.class.cast(this.selectedCard);
+					if(mc.hasEffect() && !mc.usedEffect) {
+						item = new ItemStack(Material.PAPER);
+						Main.setItemName(item, "Effect");
+						i.setItem(26, item);
+					}
+				}
+			}
 		}
 		if(this.phase == 6) {
 			item = new ItemStack(Material.SIGN);

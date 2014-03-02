@@ -6,6 +6,7 @@ public class Trait {
 
 	public static HashMap<String, Trait> BY_NAME = new HashMap<String, Trait>();
 	
+	public static Trait ARCHFIEND = new Trait("Archfiend");
 	public static Trait ANIMAL = new Trait("Animal");
 	public static Trait AQUA = new Trait("Aqua");
 	public static Trait BEAST = new Trait("Beast");
@@ -14,6 +15,7 @@ public class Trait {
 	public static Trait DARKSPELLCASTER = new Trait("DarkSpellcaster");
 	public static Trait DINOSAUR = new Trait("Dinosaur");
 	public static Trait DRAGON = new Trait("Dragon");
+	public static Trait EGG = new Trait("Egg");
 	public static Trait ELF = new Trait("Elf");
 	public static Trait FAIRY = new Trait("Fairy");
 	public static Trait FEMALE = new Trait("Female");
@@ -33,12 +35,17 @@ public class Trait {
 	public static Trait SPECIAL_D = new Trait("Special-D");
 	public static Trait SPELLCASTER = new Trait("Spellcaster");
 	public static Trait THUNDER = new Trait("Thunder");
+	public static Trait TOON = new Trait("Toon");
 	public static Trait TURTLE = new Trait("Turtle");
 	public static Trait WARRIOR = new Trait("Warrior");
 	public static Trait WINGEDBEAST = new Trait("WingedBeast");
 	public static Trait ZOMBIE = new Trait("Zombie");
 	
 	public String name;
+	
+	public Trait() {
+		
+	}
 	
 	public Trait(String name) {
 		this.name = name;

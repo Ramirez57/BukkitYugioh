@@ -11,6 +11,21 @@ public class Deck {
 	public Stack<Card> cards;
 	//public Duelist owner; Do not use
 
+	public int getAvgLv() {
+		int lv = 0;
+		int num = 0;
+		for(Card c : cards) {
+			if(MonsterCard.class.isInstance(c)) {
+				lv += MonsterCard.class.cast(c).level;
+				num++;
+			}
+		}
+		if(num != 0)
+			return (lv/num);
+		else
+			return 0;
+	}
+	
 	public void shuffle() {
 		Collections.shuffle(cards, PluginVars.random);
 	}

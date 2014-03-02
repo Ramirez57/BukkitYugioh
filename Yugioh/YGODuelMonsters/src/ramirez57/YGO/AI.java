@@ -105,19 +105,29 @@ public class AI implements Runnable {
 					}
 				} else if(goal == AI.DIRECT_ATTACK) {
 					canplay.clear();
-					if(duelist.field.emptyMonsterZones()) {
-						for(c = 0; c < duelist.hand.size(); c++) {
-							if(MonsterCard.class.isInstance(duelist.hand.cards.elementAt(c)))
-								canplay.push(duelist.hand.cards.elementAt(c));
+					fusions = AI.howToDefeat(1, null, duel, duelist);
+					if(fusions.empty()) {
+						AI.playFrom(canplay, duel, duelist, timer, false, null);
+					} else {
+						canplay = fusions.get(PluginVars.random.nextInt(fusions.size()));
+						if(canplay.size() <= 1) {
+							AI.playFrom(canplay, duel, duelist, timer, false, null);
+						} else {
+							AI.doFusion(canplay, duel, duelist, null, timer);
 						}
 					}
-					AI.playFrom(canplay, duel, duelist, timer, false, null);
+					
 					goal = AI.BATTLE;
 				} else if(goal == AI.DEFEAT_CARD) {
 					canplay.clear();
 					oppmonsters = AI.getCardList(duelist.opponent);
 					mc = oppmonsters.pop();
-					fusions = AI.howToDefeat(mc, duel, duelist);
+					if(mc.position == MonsterPosition.ATTACK) {
+						fusions = AI.howToDefeat(mc.getAtk(), mc.star, duel, duelist);
+					} else {
+						fusions = AI.howToDefeat(mc.getDef(), mc.star, duel, duelist);
+					}
+					
 					if(fusions.empty()) {
 						if(PluginVars.hard_mode) {
 							// AI IS A CHEATER LOL
@@ -200,6 +210,21 @@ public class AI implements Runnable {
 											//TODO: Cancel this event
 											System.out.println("WHAT?");
 										}
+										Thread.sleep(timer);
+									}
+								}
+							}
+						}
+					}
+					if(PluginVars.monster_effects) { 
+						for(c = 0; c < duelist.field.monsterzones.length; c++) {
+							if(!duelist.field.monsterzones[c].isOpen()) {
+								mc = MonsterCard.class.cast(duelist.field.monsterzones[c].card);
+								if(!mc.attacked && mc.hasEffect() && !mc.usedEffect) {
+									if(mc.shouldActivate(duel, duelist)) {
+										AI.doInput(timer, duel, duelist, 27+c, ClickType.LEFT);
+										Thread.sleep(timer);
+										AI.doInput(timer, duel, duelist, 26, ClickType.LEFT);
 										Thread.sleep(timer);
 									}
 								}
@@ -371,18 +396,13 @@ public class AI implements Runnable {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static Stack<Stack<Card>> howToDefeat(MonsterCard mc, Duel duel, Duelist duelist) {
+	public static Stack<Stack<Card>> howToDefeat(int number, GuardianStar gs, Duel duel, Duelist duelist) {
 		Stack<Stack<Card>> mycards = new Stack<Stack<Card>>();
 		MonsterCard mymc;
 		Stack<Card> workspace = new Stack<Card>();
-		int number = 0;
-		if(mc.position == MonsterPosition.ATTACK)
-			number = mc.getAtk();
-		else
-			number = mc.getDef();
 		int c;
 		int d;
-		for(c = 0; c < duelist.hand.size(); c++) {
+		/*for(c = 0; c < duelist.hand.size(); c++) {
 			workspace = new Stack<Card>();
 			if(MonsterCard.class.isInstance(duelist.hand.cards.elementAt(c))) {
 				mymc = MonsterCard.class.cast(duelist.hand.cards.elementAt(c));
@@ -410,62 +430,75 @@ public class AI implements Runnable {
 					}
 				}
 			}
-		}
-		Stack<Card> hand = null;
+		}*/
+		Stack<Card> hand = (Stack<Card>) duelist.hand.cards.clone();
+		Stack<Card> fusion = null;
+		Card card1 = null;
+		Card card2 = null;
+		Card result = null;
 		for(c = 0; c < 5; c++) {
+			fusion = new Stack<Card>();
 			hand = (Stack<Card>) duelist.hand.cards.clone();
-			Stack<Card> fusion = new Stack<Card>();
-			for(d = c+1; d < hand.size(); d++) {
-				hand = (Stack<Card>) duelist.hand.cards.clone();
-				Card card1 = hand.get(c);
-				Card card2 = hand.get(d);
-				Card result = Fusion.createFusion(duel, duelist, card1, card2).initiate(false);
-				if(result != card1 && result != card2) {
-					fusion.push(card1);
-					fusion.push(card2);
-					if(MonsterCard.class.isInstance(result)) {
-						mymc = MonsterCard.class.cast(result);
-						int pow = mymc.getAtk();
-						if(mymc.stars[0].isSuperiorTo(mc.star)) {
-							pow += 500;
-						} else if(mc.stars[0].isSuperiorTo(mymc.star)) {
-							pow -= 500;
-						}
-						if(pow >= number) {
-							mycards.push(fusion);
-						} else {
-							for(int e = 0; e < hand.size(); e++) {
-								if(EquipCard.class.isInstance(hand.get(e))) {
-									EquipCard ec = EquipCard.class.cast(hand.get(e));
-									if(mymc.canEquip(ec)) {
-										if(pow + ec.incrementBy >= number) {
-											fusion.push(ec);
-											mycards.push(fusion);
-										}
-									}
+			card1 = hand.remove(c);
+			fusion.push(card1);
+			result = card1;
+			while(result != null) {
+				for(d = 0; d < hand.size(); d++) {
+					card2 = hand.get(d);
+					result = Fusion.createFusion(duel, duelist, card1, card2).initiate(false);
+					if(result != card1 && result != card2) {
+						fusion.push(card2);
+						hand.remove(d);
+						card1 = result;
+						break;
+					}
+					result = null;
+				}
+			}
+			result = card1;
+			if(MonsterCard.class.isInstance(result)) {
+				mymc = MonsterCard.class.cast(result);
+				int pow = mymc.getAtk();
+				if(gs != null) {
+					if(mymc.stars[0].isSuperiorTo(gs)) {
+						pow += 500;
+					} else if(gs.isSuperiorTo(mymc.star)) {
+						pow -= 500;
+					}
+				}
+				if(pow >= number) {
+					mycards.push(fusion);
+				} else {
+					for(int e = 0; e < hand.size(); e++) {
+						if(EquipCard.class.isInstance(hand.get(e))) {
+							EquipCard ec = EquipCard.class.cast(hand.get(e));
+							if(mymc.canEquip(ec)) {
+								if(pow + ec.incrementBy >= number) {
+									fusion.push(ec);
+									mycards.push(fusion);
 								}
 							}
-						}
-					} else if(EquipCard.class.isInstance(result)) {
-						EquipCard ec = EquipCard.class.cast(result);
-						for(int e = 0; e < hand.size(); e++) {
-							if(MonsterCard.class.isInstance(hand.get(e))) {
-								mymc = MonsterCard.class.cast(hand.get(e));
-								int pow = mymc.getAtk();
-								if(mymc.canEquip(ec)) {
-									if(pow + ec.incrementBy >= number) {
-										fusion.push(mymc);
-										mycards.push(fusion);
-									}
-								}
-							}
-						}
-					} else if(SpellCard.class.isInstance(result)) {
-						SpellCard sc = SpellCard.class.cast(result);
-						if(sc.shouldActivate(duel, duelist)) {
-							mycards.push(fusion);
 						}
 					}
+				}
+			} else if(EquipCard.class.isInstance(result)) {
+				EquipCard ec = EquipCard.class.cast(result);
+				for(int e = 0; e < hand.size(); e++) {
+					if(MonsterCard.class.isInstance(hand.get(e))) {
+						mymc = MonsterCard.class.cast(hand.get(e));
+						int pow = mymc.getAtk();
+						if(mymc.canEquip(ec)) {
+							if(pow + ec.incrementBy >= number) {
+								fusion.push(mymc);
+								mycards.push(fusion);
+							}
+						}
+					}
+				}
+			} else if(SpellCard.class.isInstance(result)) {
+				SpellCard sc = SpellCard.class.cast(result);
+				if((!duelist.field.emptyMonsterZones()) && sc.shouldActivate(duel, duelist)) {
+					mycards.push(fusion);
 				}
 			}
 		}

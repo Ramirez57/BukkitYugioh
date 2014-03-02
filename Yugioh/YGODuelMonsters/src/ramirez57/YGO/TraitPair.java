@@ -27,4 +27,11 @@ public class TraitPair {
 		return false;
 	}
 	
+	public boolean equals(TraitPair tp) {
+		if(this.t1 == tp.t1 && this.t2 == tp.t2)
+			return true;
+		if(this.t2 == tp.t1 && this.t1 == tp.t2)
+			return true;
+		return false;
+	}
 }

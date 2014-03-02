@@ -40,4 +40,8 @@ public class Terrain {
 	public boolean hasTexture() {
 		return (this.texture != null);
 	}
+	
+	public Terrain fromString(String name) {
+		return Terrain.BY_NAME.get(name);
+	}
 }

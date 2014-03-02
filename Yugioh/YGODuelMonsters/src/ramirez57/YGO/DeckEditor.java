@@ -48,6 +48,24 @@ public class DeckEditor {
 			}
 		}
 	};
+	public static Comparator<Card> SORTER_ATKCARD = new Comparator<Card>() {
+		@Override
+		public int compare(final Card o1, final Card o2) {
+			Card c1,c2;
+			MonsterCard mc1,mc2;
+			c1 = o1;
+			c2 = o2;
+			if(SpellCard.class.isInstance(c1) || EquipCard.class.isInstance(c1)) {
+				return -1;
+			} else if(SpellCard.class.isInstance(c2) || EquipCard.class.isInstance(c2)) {
+				return 1;
+			} else {
+				mc1 = MonsterCard.class.cast(c1);
+				mc2 = MonsterCard.class.cast(c2);
+				return Integer.compare(mc1.atk, mc2.atk);
+			}
+		}
+	};
 	public static Comparator<Integer> SORTER_DEF = new Comparator<Integer>() {
 		@Override
 		public int compare(final Integer o1, final Integer o2) {

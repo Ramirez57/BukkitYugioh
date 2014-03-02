@@ -4,9 +4,11 @@ import java.util.Stack;
 
 public class Hand {
 	public Stack<Card> cards;
+	public boolean revealed;
 	
 	public Hand() {
 		this.cards = new Stack<Card>();
+		this.revealed = false;
 	}
 	
 	public void discard(Duel duel, Card c) {

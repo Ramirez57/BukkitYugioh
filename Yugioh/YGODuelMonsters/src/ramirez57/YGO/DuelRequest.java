@@ -43,7 +43,7 @@ public class DuelRequest implements Runnable {
 			if(DeckGenerator.checkDeckInt(PluginVars.getDeckFor(this.requester)) && DeckGenerator.checkDeckInt(PluginVars.getDeckFor(this.requested))) {
 				Inventory i1 = Bukkit.getServer().createInventory(null, 54, "Duel Monsters");
 				Inventory i2 = Bukkit.getServer().createInventory(null, 54, "Duel Monsters");
-				Duel duel = PluginVars.createDuel(this.requester, i1, this.requested, i2, null);
+				Duel duel = PluginVars.createDuel(this.requester, i1, null, this.requested, i2, null);
 				this.requester.openInventory(i1);
 				this.requested.openInventory(i2);
 				duel.startDuel();

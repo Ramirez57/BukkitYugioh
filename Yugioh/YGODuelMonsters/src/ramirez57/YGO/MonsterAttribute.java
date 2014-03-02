@@ -12,8 +12,13 @@ public class MonsterAttribute {
 	public static MonsterAttribute EARTH = new MonsterAttribute("Earth");
 	public static MonsterAttribute LIGHT = new MonsterAttribute("Light");
 	public static MonsterAttribute DARK = new MonsterAttribute("Dark");
+	public static MonsterAttribute DIVINE = new MonsterAttribute("Divine");
 	
 	public String name;
+	
+	public MonsterAttribute() {
+		
+	}
 	
 	public MonsterAttribute(String name) {
 		this.name = name;

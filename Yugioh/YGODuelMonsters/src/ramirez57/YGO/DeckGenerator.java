@@ -92,7 +92,7 @@ public class DeckGenerator {
 				if(SpellCard.class.isInstance(card) || EquipCard.class.isInstance(card)) {
 					if(EquipCard.class.isInstance(card)) {
 						EquipCard ec = EquipCard.class.cast(card);
-						if(ec.equipsTo.contains(-1)) {
+						if(ec.equipsToAll) {
 							secards.add(ec);
 							secards.add(ec);
 							secards.add(ec);

@@ -5,17 +5,21 @@ import java.util.List;
 public class EquipCard extends Card {
 	
 	public int incrementBy;
-	public List<Integer> equipsTo;
+	public boolean equipsToAll;
+	public List<Integer> equipsTo; //temporary field. Do not use!
 	
-	public static EquipCard create(String name, int incrementor, List<Integer> equipsTo) {
+	public static EquipCard create(String name, int incrementor) {
 		EquipCard ec = new EquipCard();
 		ec.name = name;
 		ec.incrementBy = incrementor;
-		ec.equipsTo = equipsTo;
+		ec.equipsToAll = false;
+		ec.equipsTo = null;
 		return ec;
 	}
 	
+	@Deprecated
 	public boolean canEquip(MonsterCard mc) {
-		return this.equipsTo.contains(mc.id);
+		//return this.equipsTo.contains(mc.id);
+		return false;
 	}
 }

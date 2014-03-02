@@ -16,4 +16,12 @@ public class CardPair {
 			return true;
 		return false;
 	}
+	
+	public boolean equals(CardPair cp) {
+		if(this.id1 == cp.id1 && this.id2 == cp.id2)
+			return true;
+		if(this.id2 == cp.id1 && this.id1 == cp.id2)
+			return true;
+		return false;
+	}
 }

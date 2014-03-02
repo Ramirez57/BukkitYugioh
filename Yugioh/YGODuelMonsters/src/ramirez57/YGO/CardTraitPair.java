@@ -18,4 +18,7 @@ public class CardTraitPair {
 		return false;
 	}
 	
+	public boolean equals(CardTraitPair ctp) {
+		return (this.id == ctp.id && this.trait == ctp.trait);
+	}
 }

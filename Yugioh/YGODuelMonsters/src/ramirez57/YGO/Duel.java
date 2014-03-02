@@ -1,11 +1,14 @@
 package ramirez57.YGO;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Stack;
 import java.util.UUID;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.Inventory;
@@ -17,14 +20,16 @@ public class Duel {
 	public boolean firstturn;
 	public String broadcast;
 	public Terrain terrain;
+	public Tournament tournament;
+	public boolean ended;
 
-	public static Duel createDuel(Player p1, Inventory i1, Player p2,
-			Inventory i2, UUID uuid) {
+	public static Duel createDuel(Player p1, Inventory i1, UUID uuid1, Player p2,
+			Inventory i2, UUID uuid2) {
 		Duel duel = new Duel();
 		duel.duelists = new Duelist[2];
 		try {
-			duel.duelists[0] = Duelist.fromPlayer(p1, i1, uuid);
-			duel.duelists[1] = Duelist.fromPlayer(p2, i2, uuid);
+			duel.duelists[0] = Duelist.fromPlayer(p1, i1, uuid1);
+			duel.duelists[1] = Duelist.fromPlayer(p2, i2, uuid2);
 		} catch (NoDeckException e) {
 			duel.endDuel(null, WinReason.SURRENDER);
 		}
@@ -34,7 +39,70 @@ public class Duel {
 		duel.graveyard = new Stack<Card>();
 		duel.broadcast = "Game Start";
 		duel.terrain = Terrain.NORMAL;
+		duel.ended = false;
 		return duel;
+	}
+	
+	public int getDuelistId(Duelist duelist) throws NotDuelingException {
+		int i;
+		for(i = 0; i < 2; i++) {
+			if(this.duelists[i] == duelist)
+				return i;
+		}
+		throw new NotDuelingException();
+	}
+	
+	public static Duel createEmptyDuel() {
+		Duel duel = new Duel();
+		duel.duelists = new Duelist[2];
+		duel.terrain = Terrain.NORMAL;
+		duel.broadcast = "Game Start";
+		duel.graveyard = new Stack<Card>();
+		duel.firstturn = true;
+		return duel;
+	}
+	
+	public void setDuelist(int num, Entity entity, Inventory i, UUID uuid) {
+		try {
+			if(entity.getType() == EntityType.PLAYER) {
+				this.duelists[num] = Duelist.fromPlayer(Player.class.cast(entity), i, null);
+			} else {
+				this.duelists[num] = Duelist.fromPlayer(null, i, uuid);
+			}
+		} catch(NoDeckException e) {
+			this.endDuel(null, WinReason.SURRENDER);
+		}
+	}
+	
+	public Zone summonMonster(Field field, int id) {
+		MonsterZone mz = null;
+		try {
+			mz = field.getFirstOpenMonsterZone();
+		} catch (NoZoneOpenException e) {
+			return null;
+		}
+		MonsterCard mc = MonsterCard.class.cast(Card.fromId(id).copy());
+		mc.faceup = false;
+		mc.bonus = 0;
+		mc.attacked = false;
+		mc.usedEffect = false;
+		mc.position = MonsterPosition.ATTACK;
+		mc.star = mc.stars[0];
+		this.applyTerrain(this.terrain, mc, false);
+		mz.put(mc);
+		return mz;
+	}
+	
+	public MonsterCard popMonsterFromGraveyard() {
+		int i = this.graveyard.size();
+		while(i != 0) {
+			i--;
+			if(MonsterCard.class.isInstance(this.graveyard.get(i))) {
+				MonsterCard mc = MonsterCard.class.cast(this.graveyard.remove(i));
+				return mc;
+			}
+		}
+		return null;
 	}
 
 	public void changeTerrain(Terrain terrain) {
@@ -84,8 +152,12 @@ public class Duel {
 
 	public void startDuel() {
 		int i;
+		this.ended = false;
+		this.duelists[0].opponent = this.duelists[1];
+		this.duelists[1].opponent = this.duelists[0];
 		for (i = 0; i < 2; i++) {
 			this.duelists[i].lp = 8000;
+			//this.duelists[i].avg_lv = this.duelists[i].deck.getAvgLv();
 			this.duelists[i].deck.shuffle();
 			this.duelists[i].swords = 0;
 		}
@@ -97,6 +169,9 @@ public class Duel {
 		Card c;
 		Iterator<Card> iterator;
 		PluginVars.duel_list.remove(this);
+		if(this.ended)
+			return;
+		this.ended = true;
 		if (winner != null) {
 			if (winner.player != null) {
 				winner.player.closeInventory();
@@ -163,15 +238,6 @@ public class Duel {
 								winner.rewards = this.graveyard;
 							}
 						} else {
-							iterator = winner.rewards.iterator();
-							while (iterator.hasNext()) {
-								c = iterator.next();
-								if (MonsterCard.class.isInstance(c)) {
-									mc = MonsterCard.class.cast(c);
-									if (mc.level > 4)
-										iterator.remove();
-								}
-							}
 							if(pow) {
 								iterator = this.graveyard.iterator();
 								while (iterator.hasNext()) {
@@ -240,6 +306,21 @@ public class Duel {
 					.getName());
 			this.duelists[1].player.closeInventory();
 		}
+		if(this.tournament != null) {
+			this.tournament.winner(winner);
+			this.tournament.nextDuel();
+			this.tournament = null;
+		}
+	}
+	
+	public boolean activateSpell(SpellCard sc, Duelist activator) {
+		TrapEventActivate tea = new TrapEventActivate(this, activator.opponent, activator, sc);
+		if(!this.triggerTraps(activator.opponent, activator, tea)) {
+			this.sfx(Sound.FIRE_IGNITE);
+			sc.activate(this, activator);
+			return false;
+		}
+		return true;
 	}
 
 	public void input(Duelist duelist, int slot, ClickType action) {
@@ -297,8 +378,8 @@ public class Duel {
 					} else if (SpellCard.class.isInstance(duelist.selectedCard)) {
 						SpellCard sc = SpellCard.class
 								.cast(duelist.selectedCard);
-						sc.activate(this, duelist);
 						this.graveyard.push(sc);
+						this.activateSpell(sc, duelist);
 						duelist.phase = 3;
 					} else if (EquipCard.class.isInstance(duelist.selectedCard)) {
 						EquipCard ec = EquipCard.class
@@ -385,8 +466,8 @@ public class Duel {
 									.isInstance(duelist.selectedCard)) {
 								SpellCard sc = SpellCard.class
 										.cast(duelist.selectedCard);
-								sc.activate(this, duelist);
 								this.graveyard.push(sc);
+								this.activateSpell(sc, duelist);
 								duelist.phase = 3;
 							} else if (EquipCard.class
 									.isInstance(duelist.selectedCard)) {
@@ -449,9 +530,9 @@ public class Duel {
 					if (SpellCard.class.isInstance(duelist.selectedCard)) {
 						SpellCard sc = SpellCard.class
 								.cast(duelist.selectedCard);
-						sc.activate(this, duelist);
 						duelist.field.magiczones[slot - 36].toGraveyard(this,
 								null);
+						this.activateSpell(sc, duelist);
 					} else if (EquipCard.class.isInstance(duelist.selectedCard)) {
 						duelist.phase = 7;
 					}
@@ -464,9 +545,9 @@ public class Duel {
 				SpellCard sc = SpellCard.class.cast(duelist.selectedCard);
 				if (slot == 26) {
 					duelist.phase = 3;
-					sc.activate(this, duelist);
 					this.graveyard.push(sc);
 					duelist.hand.cards.removeElement(sc);
+					this.activateSpell(sc, duelist);
 				} else if (slot >= 36 && slot <= 40) {
 					if (duelist.field.magiczones[slot - 36].isOpen()) {
 						duelist.field.magiczones[slot - 36].put(sc);
@@ -498,6 +579,15 @@ public class Duel {
 											.cast(duelist.opponent.field.monsterzones[22 - slot].card));
 							duelist.phase = 3;
 						}
+					}
+				} else if(slot == 26) {
+					if(mc.hasEffect() && !mc.usedEffect) {
+						this.sfx(Sound.FIRE_IGNITE);
+						mc.faceup = true;
+						mc.attacked = true;
+						mc.usedEffect = true;
+						mc.activate(this, duelist);
+						duelist.phase = 3;
 					}
 				}
 			}
@@ -626,6 +716,7 @@ public class Duel {
 	}
 
 	public void sfx(Sound sound) {
+		List<Spectator> spectators = null;
 		if (this.duelists[0].player != null) {
 			this.duelists[0].player.playSound(
 					this.duelists[0].player.getLocation(), sound, 1.0f, 1.0f);
@@ -633,6 +724,14 @@ public class Duel {
 		if (this.duelists[1].player != null) {
 			this.duelists[1].player.playSound(
 					this.duelists[1].player.getLocation(), sound, 1.0f, 1.0f);
+		}
+		spectators = PluginVars.getSpectators(this.duelists[0]);
+		for(Spectator s : spectators) {
+			s.spectator.playSound(s.spectator.getLocation(), sound, 1.0f, 1.0f);
+		}
+		spectators = PluginVars.getSpectators(this.duelists[1]);
+		for(Spectator s : spectators) {
+			s.spectator.playSound(s.spectator.getLocation(), sound, 1.0f, 1.0f);
 		}
 	}
 
@@ -750,26 +849,40 @@ public class Duel {
 	}
 
 	public void playerTurn(int turn) {
-		this.turn = turn;
-		if (!this.duelists[turn].drawUntil(5)) {
-			this.endDuel(this.duelists[turn].opponent, WinReason.ATTRITION);
-		}
 		int c;
-		if (this.hasExodia(this.duelists[turn])) {
-			this.endDuel(this.duelists[turn], WinReason.EXODIA);
-		}
-		this.duelists[turn].phase = 1;
-		this.duelists[turn].fused = false;
-		for (c = 0; c < this.duelists[turn].field.monsterzones.length; c++) {
-			if (this.duelists[turn].field.monsterzones[c].card != null) {
+		Duelist duelist = this.duelists[turn];
+		Duelist opponent = this.duelists[turn].opponent;
+		MonsterZone mz;
+		this.turn = turn;
+		for (c = 0; c < opponent.field.monsterzones.length; c++) {
+			if (opponent.field.monsterzones[c].card != null) {
 				MonsterCard mc = MonsterCard.class
-						.cast(this.duelists[turn].field.monsterzones[c].card);
+						.cast(opponent.field.monsterzones[c].card);
 				mc.attacked = false;
+				if(mc.stolen % 2 == 1) {
+					try {
+						mz = duelist.field.getFirstOpenMonsterZone();
+						mz.put(opponent.field.monsterzones[c].card);
+						opponent.field.monsterzones[c].remove();
+					} catch (NoZoneOpenException e) {
+						opponent.field.monsterzones[c].toGraveyard(this, opponent);
+					}
+				}
 			}
 		}
+		duelist.hand.revealed = false;
+		if (!duelist.drawUntil(5)) {
+			this.endDuel(this.duelists[turn].opponent, WinReason.ATTRITION);
+		}
+		if (this.hasExodia(duelist)) {
+			this.endDuel(duelist, WinReason.EXODIA);
+		}
+		duelist.phase = 1;
+		duelist.fused = false;
+		
 		this.updateInterfaces();
-		if (this.duelists[turn].player == null)
-			new Thread(new AI(this.duelists[turn], this)).start();
+		if (duelist.player == null)
+			new Thread(new AI(duelist, this)).start();
 	}
 
 	public void swapTurn() {

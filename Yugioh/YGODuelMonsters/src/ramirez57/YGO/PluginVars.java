@@ -2,6 +2,7 @@ package ramirez57.YGO;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -43,6 +44,8 @@ public class PluginVars {
 	public static HashMap<Player, Spectator> spectating = new HashMap<Player, Spectator>();
 	public static boolean hard_mode = false;
 	public static boolean allow_commu_fusion = true;
+	public static boolean monster_effects = false;
+	public static boolean allow_tournaments = false;
 	
 	public static void newYgoPlayer(Player p) {
 		PluginVars.player_decks.put(p.getName(), new Stack<Integer>());
@@ -180,6 +183,8 @@ public class PluginVars {
 	public static void load() {
 		PluginVars.hard_mode = PluginVars.config.getBoolean("hard_mode", false);
 		PluginVars.allow_commu_fusion = PluginVars.config.getBoolean("allow_commu_fusion", true);
+		PluginVars.monster_effects = PluginVars.config.getBoolean("monster_effects", false);
+		PluginVars.allow_tournaments = PluginVars.config.getBoolean("allow_tournaments", false);
 		try {
 			PluginVars.config.save(PluginVars.configFile);
 		} catch (IOException e1) {
@@ -234,14 +239,25 @@ public class PluginVars {
 		return deck;
 	}
 	
-	public static Duel createDuel(Player p1, Inventory i1, Player p2, Inventory i2, UUID uuid) {
-		Duel duel = Duel.createDuel(p1, i1, p2, i2, uuid);
+	public static Duel createDuel(Player p1, Inventory i1, UUID uuid1, Player p2, Inventory i2, UUID uuid2) {
+		Duel duel = Duel.createDuel(p1, i1, uuid1, p2, i2, uuid2);
 		PluginVars.duel_list.add(duel);
 		if(p1 != null)
 			PluginVars.plugin.dueling.add(p1.getName());
 		if(p2 != null)
 			PluginVars.plugin.dueling.add(p2.getName());
 		return duel;
+	}
+	
+	public static List<Spectator> getSpectators(Duelist duelist) {
+		List<Spectator> ret = new ArrayList<Spectator>();
+		Collection<Spectator> spectators = PluginVars.spectating.values();
+		for(Spectator s : spectators) {
+			if(s.duelist == duelist) {
+				ret.add(s);
+			}
+		}
+		return ret;
 	}
 
 	public static void loadStarterDeck(File file) {

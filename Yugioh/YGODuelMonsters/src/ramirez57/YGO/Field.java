@@ -148,4 +148,20 @@ public class Field {
 		} catch (NoZoneOpenException e) {
 		}
 	}
+	
+	public MonsterZone pickMonsterZone() { //Picks highest atk monster zone (for effects)
+		int highest_atk = -1;
+		MonsterZone mz = null;
+		MonsterCard mc = null;
+		for(MonsterZone zone : this.monsterzones) {
+			if(!zone.isOpen()) {
+				mc = MonsterCard.class.cast(zone.card);
+				if(mc.getAtk() > highest_atk) {
+					highest_atk = mc.getAtk();
+					mz = zone;
+				}
+			}
+		}
+		return mz;
+	}
 }

@@ -24,6 +24,8 @@ public class TrapEvent {
 			return TrapEventLPDecrease.class;
 		else if(s.equalsIgnoreCase("powerup"))
 			return TrapEventPowerUp.class;
+		else if(s.equalsIgnoreCase("activate"))
+			return TrapEventActivate.class;
 		return TrapEvent.class;
 	}
 	

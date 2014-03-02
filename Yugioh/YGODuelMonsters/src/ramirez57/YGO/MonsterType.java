@@ -28,6 +28,11 @@ public class MonsterType {
 	public static MonsterType ZOMBIE = new MonsterType("Zombie");
 	
 	public String name;
+	
+	public MonsterType() {
+		
+	}
+	
 	public MonsterType(String name) {
 		this.name = name;
 		MonsterType.BY_NAME.put(name.toUpperCase(), this);

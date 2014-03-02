@@ -21,6 +21,7 @@ public class Card implements Cloneable {
 	public int id;
 	//public Duelist defeatedBy; Do not use
 	public Trait[] traits;
+	public int stolen;
 	
 	public static Card cards[]; //Use this to iterate over all cards. Do not use this to reference by ID!
 	public static HashMap<String, Card> BY_PASSWORD;
@@ -29,6 +30,7 @@ public class Card implements Cloneable {
 
 	public Card() {
 		this.bonus = 0;
+		this.stolen = 0;
 	}
 	
 	public static Card create(String n) {
@@ -36,6 +38,11 @@ public class Card implements Cloneable {
 		c.name = n;
 		c.faceup = true;
 		return c;
+	}
+	
+	public void resetBonus(Duel duel) {
+		this.bonus = 0;
+		duel.applyTerrain(duel.terrain, this, false);
 	}
 	
 	public Card copy() {
@@ -96,6 +103,7 @@ public class Card implements Cloneable {
 		FieldCard fc;
 		RitualCard rc;
 		TrapCard tc;
+		Card card;
 		Card.BY_PASSWORD = new HashMap<String, Card>();
 		Card.BY_ID = new HashMap<Integer, Card>();
 		File[] files = PluginVars.dirCards.listFiles();
@@ -108,7 +116,7 @@ public class Card implements Cloneable {
 			set_names.add(f.getName());
 		}
 		for(YamlConfiguration config : card_configs) {
-			numCards = config.getKeys(false).size();
+			numCards += config.getKeys(false).size();
 		}
 		String foundsets = "Found sets: ";
 		for(c = 0; c < set_names.size(); c++) {
@@ -117,12 +125,12 @@ public class Card implements Cloneable {
 			else
 				foundsets += set_names.get(c) + ", ";
 		}
-		PluginVars.plugin.getLogger().info(foundsets);
+		PluginVars.plugin.getLogger().info(foundsets + " (" + numCards + " cards)");
+		Card.cards = new Card[numCards];
+		c = 0;
 		for(YamlConfiguration config : card_configs) {
 			Set<String> cardconfigs = config.getKeys(false);
 			Iterator<String> iterator = cardconfigs.iterator();
-			Card.cards = new Card[numCards];
-			c = 0;
 			while(iterator.hasNext()) {
 				String prefix = iterator.next();
 				//System.out.println(prefix);
@@ -130,6 +138,7 @@ public class Card implements Cloneable {
 				if(s.equalsIgnoreCase("monster")) {
 					mc = new MonsterCard();
 					mc.id = config.getInt(prefix + ".id");
+					//System.out.println("Loading " + mc.id);
 					mc.name = config.getString(prefix + ".name");
 					mc.atk = config.getInt(prefix + ".atk");
 					mc.def = config.getInt(prefix + ".def");
@@ -149,6 +158,14 @@ public class Card implements Cloneable {
 						mc.traits[i] = Trait.fromString(ls.get(i));
 					}
 					mc.traits[ls.size()] = Trait.fromString(mc.attribute.toString());
+					mc.equips = config.getIntegerList(prefix + ".equips");
+					if(config.isSet(prefix + ".effect")) {
+						mc.effectFile = new File(PluginVars.dirCards, config.getString(prefix + ".effect"));
+						mc.effectDesc = Card.splitEvery(16, config.getString(prefix + ".effectDesc"));
+					} else {
+						mc.effectFile = null;
+						mc.effectDesc = null;
+					}
 					Card.cards[c] = mc;
 				} else if(s.equalsIgnoreCase("spell")) {
 					sc = SpellCard.create(config.getString(prefix + ".name"), new File(PluginVars.dirCards, config.getString(prefix + ".effect")));
@@ -159,12 +176,15 @@ public class Card implements Cloneable {
 					sc.cost = config.getInt(prefix + ".cost");
 					Card.cards[c] = sc;
 				} else if(s.equalsIgnoreCase("equip")) {
-					ec = EquipCard.create(config.getString(prefix + ".name"), config.getInt(prefix + ".power"), config.getIntegerList(prefix + ".equipsTo"));
+					ec = EquipCard.create(config.getString(prefix + ".name"), config.getInt(prefix + ".power"));
 					ec.id = config.getInt(prefix + ".id");
 					ec.desc = Card.splitEvery(16, config.getString(prefix + ".description"));
 					ec.password = prefix;
 					ec.obtainable = config.getBoolean(prefix + ".obtainable");
 					ec.cost = config.getInt(prefix + ".cost");
+					if(config.isSet(prefix + ".equipsTo")) {
+						ec.equipsTo = config.getIntegerList(prefix + ".equipsTo");
+					}
 					Card.cards[c] = ec;
 				} else if(s.equalsIgnoreCase("field")) {
 					List<String> szfavors = config.getStringList(prefix + ".favors");
@@ -204,15 +224,72 @@ public class Card implements Cloneable {
 				c++;
 			}
 		}
-		
 		for(c=0; c < Card.cards.length; c++) {
 			Card.BY_PASSWORD.put(Card.cards[c].password, Card.cards[c]);
 			Card.BY_ID.put(Card.cards[c].id, Card.cards[c]);
 			if(c>1)
 			if(Card.cards[c-1].id != c) {
-				System.out.println("Missing Card? " + c);
+				//System.out.println("Missing Card? " + c);
+			}
+		}
+		for(c = 0; c < Card.cards.length; c++) {
+			if(EquipCard.class.isInstance(Card.cards[c])) {
+				ec = EquipCard.class.cast(Card.cards[c]);
+				if(ec.equipsTo != null) {
+					for(Integer id : ec.equipsTo) {
+						if(id == -1) {
+							ec.equipsToAll = true;
+						} else {
+							mc = MonsterCard.class.cast(Card.fromId(id));
+							if(mc != null) {
+								if(!mc.equips.contains(ec.id)) {
+									mc.equips.add(ec.id);
+								}
+							}
+						}
+					}
+				}
+				ec.equipsTo = null; //nullify reference to save space
 			}
 		}
 		PluginVars.logger.info("Loaded " + numCards + " cards.");
+		//Card.printStatistics();
+	}
+	
+	public static void printStatistics() {
+		int numMonster = 0;
+		int numEffect = 0;
+		int numSpell = 0;
+		int numRitual = 0;
+		int numEquip = 0;
+		int numTrap = 0;
+		int numField = 0;
+		int numObtainable = 0;
+		for(Card c : cards) {
+			if(c.obtainable) {
+				numObtainable++;
+			}
+			if(c instanceof MonsterCard) {
+				numMonster++;
+				if(MonsterCard.class.cast(c).effectFile != null) {
+					numEffect++;
+				}
+			} else if(c instanceof SpellCard) {
+				numSpell++;
+				if(c instanceof RitualCard) {
+					numRitual++;
+				} else if(c instanceof TrapCard) {
+					numTrap++;
+				} else if(c instanceof FieldCard) {
+					numField++;
+				}
+			} else if(c instanceof EquipCard) {
+				numEquip++;
+			}
+		}
+		PluginVars.logger.info(numMonster + " monsters (" + numEffect + " effect)\n" +
+				numSpell + " spells (" + numField + " field, " + numRitual + " ritual, " + numTrap + " trap)\n" +
+				numEquip + " equips.\n" +
+				numObtainable + " obtainble.");
 	}
 }

@@ -17,6 +17,9 @@ public class GuardianStar {
 	public static GuardianStar NEPTUNE = new GuardianStar("Neptune", GuardianStar.MARS);
 	public static GuardianStar MARS = new GuardianStar("Mars", GuardianStar.JUPITER);
 	
+	public static GuardianStar NONE = new GuardianStar("NONE", GuardianStar.MARS);
+	public static GuardianStar DIVINE = new GuardianStar("Divine", GuardianStar.NONE);
+	
 	public GuardianStar inferiorStar;
 	public String name;
 	public GuardianStar(String name, GuardianStar inferiorStar) {
@@ -41,6 +44,9 @@ public class GuardianStar {
 		GuardianStar.PLUTO.inferiorStar = GuardianStar.NEPTUNE;
 		GuardianStar.NEPTUNE.inferiorStar = GuardianStar.MARS;
 		GuardianStar.MARS.inferiorStar = GuardianStar.JUPITER;
+		
+		GuardianStar.NONE.inferiorStar = GuardianStar.DIVINE;
+		GuardianStar.DIVINE.inferiorStar = GuardianStar.NONE;
 	}
 	
 	public static GuardianStar fromString(String name) {

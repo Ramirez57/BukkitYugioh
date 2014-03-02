@@ -10,7 +10,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player; 
-import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -46,6 +45,29 @@ public class Main extends JavaPlugin implements Listener {
 		}
 	}
 	
+	public static void loadAllFusions() {
+		int c;
+		File[] files = PluginVars.dirCards.listFiles();
+		List<File> fusion_configs = new ArrayList<File>();
+		List<String> set_names = new ArrayList<String>();
+		for(File f : files) {
+			if(!f.getName().substring(0,4).equalsIgnoreCase("fus_")) continue;
+			fusion_configs.add(f);
+			set_names.add(f.getName());
+		}
+		for(File f : fusion_configs) {
+			Fusion.loadFusions(f);
+		}
+		String foundsets = "Found fusion sets: ";
+		for(c = 0; c < set_names.size(); c++) {
+			if(c+1 >= set_names.size())
+				foundsets += set_names.get(c) + ".";
+			else
+				foundsets += set_names.get(c) + ", ";
+		}
+		PluginVars.plugin.getLogger().info(foundsets);
+	}
+	
 	public void onEnable() {
 		this.dueling = new Stack<String>();
 		GuardianStar.init();
@@ -61,6 +83,15 @@ public class Main extends JavaPlugin implements Listener {
 		PluginVars.plugin = this;
 		PluginVars.engineMgr = new ScriptEngineManager();
 		PluginVars.engine = PluginVars.engineMgr.getEngineByName("JavaScript");
+		PluginVars.engine.put("Card", new Card());
+		PluginVars.engine.put("Terrain", new Terrain());
+		PluginVars.engine.put("TrapCard", new TrapCard());
+		PluginVars.engine.put("SpellCard", new SpellCard());
+		PluginVars.engine.put("MonsterCard", new MonsterCard());
+		PluginVars.engine.put("MonsterAttribute", new MonsterAttribute());
+		PluginVars.engine.put("MonsterType", new MonsterType());
+		PluginVars.engine.put("MonsterPosition", new MonsterPosition("NULL"));
+		PluginVars.engine.put("Trait", new Trait());
 		PluginVars.engineinv = (Invocable)PluginVars.engine;
 		try {
 			PluginVars.engine.eval("importPackage(Packages.ramirez57.YGO);\n");
@@ -72,7 +103,8 @@ public class Main extends JavaPlugin implements Listener {
 		Card.loadCards();
 		PluginVars.loadStarterDeck(new File(this.getDataFolder(), "starter.yml"));
 		PluginVars.load();
-		Fusion.loadFusions(new File(this.getDataFolder(), "fusions.yml"));
+		Main.loadAllFusions();
+		Fusion.printStatistics();
 		this.getLogger().info("Cleaned " + this.clean() + " decks");
 	}
 
@@ -154,7 +186,7 @@ public class Main extends JavaPlugin implements Listener {
 				if(DeckGenerator.checkDeckInt(PluginVars.getDeckFor(p))) {
 					e.setCancelled(true);
 					Inventory i = Bukkit.createInventory(null, 54, "Duel Monsters");
-					Duel duel = PluginVars.createDuel(p, i, null, null, e.getDamager().getUniqueId());
+					Duel duel = PluginVars.createDuel(p, i, null, null, null, e.getDamager().getUniqueId());
 					p.openInventory(i);
 					duel.startDuel();
 				} else {
@@ -229,7 +261,7 @@ public class Main extends JavaPlugin implements Listener {
 						try {
 							if(DeckGenerator.checkDeckInt(PluginVars.getDeckFor(p))) {
 								Inventory i = Bukkit.createInventory(null, 54, "Duel Monsters");
-								Duel duel = PluginVars.createDuel(e.getPlayer(), i, null, null, e.getRightClicked().getUniqueId());
+								Duel duel = PluginVars.createDuel(e.getPlayer(), i, null, null, null, e.getRightClicked().getUniqueId());
 								e.getPlayer().openInventory(i);
 								duel.startDuel();
 							} else {
@@ -559,6 +591,27 @@ public class Main extends JavaPlugin implements Listener {
 						}
 					}
 				}
+			} else if(args[0].equalsIgnoreCase("tournament")) {
+				if(Player.class.isInstance(sender)) {
+					Player p = Player.class.cast(sender);
+					List<Entity> entities = p.getNearbyEntities(12.0d, 12.0d, 12.0d);
+					Stack<Entity> duelists = new Stack<Entity>();
+					for(Entity e : entities) {
+						if(e.getType() == EntityType.VILLAGER) { 
+							if(PluginVars.isDuelist(e.getUniqueId())) {
+								duelists.push(e);
+							}
+						}
+					}
+					if(entities.size() + 1 >= 8) {
+						Tournament t = Tournament.create(p);
+						t.duelists = duelists;
+						t.duelists.push(p);
+						t.nextDuel();
+					} else {
+						p.sendMessage("There must be at least 7 nearby Villagers to start a tournament.");
+					}
+				}
 			}
 		} else if(cmd.getName().equalsIgnoreCase("ygoadmin")) {
 			if(args.length <= 0) {
@@ -702,6 +755,8 @@ public class Main extends JavaPlugin implements Listener {
 		sender.sendMessage("/ygo check [password] - Check card password cost");
 		if(PluginVars.allow_commu_fusion)
 			sender.sendMessage("/ygo commu [player] - Communication fusion with player");
+		if(PluginVars.allow_tournaments)
+			sender.sendMessage("/ygo tournament - Start a tournament with nearby villagers");
 	}
 
 }

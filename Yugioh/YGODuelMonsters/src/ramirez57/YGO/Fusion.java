@@ -2,6 +2,7 @@ package ramirez57.YGO;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -198,6 +199,40 @@ public class Fusion {
 		return fusion;
 	}
 	
+	public static void addTypeFusion(TraitPair tp, int result) {
+		TraitPair otp;
+		List<Card> temp;
+		Iterator<TraitPair> iterator = Fusion.typefusions.keySet().iterator();
+		while(iterator.hasNext()) {
+			otp = iterator.next();
+			if(otp.equals(tp)) {
+				Fusion.typefusions.get(otp).add(Card.fromId(result));
+				return;
+			}
+		}
+		temp = new ArrayList<Card>();
+		temp.add(Card.fromId(result));
+		Fusion.typefusions.put(tp, temp);
+		return;
+	}
+	
+	public static void addSemiTypeFusion(CardTraitPair ctp, int result) {
+		CardTraitPair octp;
+		List<Card> temp;
+		Iterator<CardTraitPair> iterator = Fusion.semitypefusions.keySet().iterator();
+		while(iterator.hasNext()) {
+			octp = iterator.next();
+			if(octp.equals(ctp)) {
+				Fusion.semitypefusions.get(octp).add(Card.fromId(result));
+				return;
+			}
+		}
+		temp = new ArrayList<Card>();
+		temp.add(Card.fromId(result));
+		Fusion.semitypefusions.put(ctp, temp);
+		return;
+	}
+	
 	public static void loadFusions(File fin) {
 		YamlConfiguration config = YamlConfiguration.loadConfiguration(fin);
 		Set<String> keys = config.getConfigurationSection("type").getKeys(false);
@@ -207,23 +242,16 @@ public class Fusion {
 		String s;
 		String s2;
 		TraitPair pair = null;
-		List<Card> results = null;
-		List<Integer> intresults = null;
 		CardTraitPair ctpair = null;
 		CardPair cpair = null;
 		while(iterator.hasNext()) {
-			s = iterator.next();
+			s = iterator.next(); //result card id
 			keys2 = config.getConfigurationSection("type." + s).getKeys(false);
 			iterator2 = keys2.iterator();
 			while(iterator2.hasNext()) {
 				s2 = iterator2.next();
-				pair = new TraitPair(Trait.fromString(s), Trait.fromString(s2));
-				intresults = config.getIntegerList("type." + s + "." + s2);
-				results = new ArrayList<Card>();
-				for(int i = 0; i < intresults.size(); i++) {
-					results.add(Card.fromId(intresults.get(i)));
-				}
-				Fusion.typefusions.put(pair, results);
+				pair = new TraitPair(Trait.fromString(s2), Trait.fromString(config.getString("type." + s + "." + s2)));
+				Fusion.addTypeFusion(pair, Integer.parseInt(s));
 				//System.out.println(pair.t1 + " + " + pair.t2 + " = " + results.get(0).name);
 			}
 		}
@@ -236,13 +264,8 @@ public class Fusion {
 			iterator2 = keys2.iterator();
 			while(iterator2.hasNext()) {
 				s2 = iterator2.next();
-				ctpair = new CardTraitPair(Integer.parseInt(s), Trait.fromString(s2));
-				intresults = config.getIntegerList("semitype." + s + "." + s2);
-				results = new ArrayList<Card>();
-				for(int i = 0; i < intresults.size(); i++) {
-					results.add(Card.fromId(intresults.get(i)));
-				}
-				Fusion.semitypefusions.put(ctpair, results);
+				ctpair = new CardTraitPair(Integer.parseInt(s2), Trait.fromString(config.getString("semitype." + s + "." + s2)));
+				Fusion.addSemiTypeFusion(ctpair, Integer.parseInt(s));
 				//System.out.println(Card.fromId(ctpair.id).name + " + " + ctpair.trait + " = " + results.get(0).name);
 			}
 		}
@@ -255,12 +278,21 @@ public class Fusion {
 			iterator2 = keys2.iterator();
 			while(iterator2.hasNext()) {
 				s2 = iterator2.next();
-				cpair = new CardPair(Integer.parseInt(s), Integer.parseInt(s2));
-				Fusion.specificfusions.put(cpair, Card.fromId(config.getInt("specific." + s + "." + s2)).freshCopy());
+				cpair = new CardPair(Integer.parseInt(s2), config.getInt("specific." + s + "." + s2));
+				Fusion.specificfusions.put(cpair, Card.fromId(Integer.parseInt(s)).freshCopy());
 				//System.out.println(Card.fromId(cpair.id1).name + " + " + Card.fromId(cpair.id2).name + " = " + Fusion.specificfusions.get(cpair).name);
 			}
 		}
 		
+		for(List<Card> results : Fusion.typefusions.values()) {
+			Collections.sort(results, DeckEditor.SORTER_ATKCARD);
+		}
+		for(List<Card> results : Fusion.semitypefusions.values()) {
+			Collections.sort(results, DeckEditor.SORTER_ATKCARD);
+		}
+	}
+	
+	public static void printStatistics() {
 		int nType = Fusion.typefusions.size();
 		int nSemiType = Fusion.semitypefusions.size();
 		int nSpecific = Fusion.specificfusions.size();
